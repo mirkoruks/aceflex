@@ -1,9 +1,8 @@
-<<<<<<< HEAD
 # Trivariate Cholesky Model
 rm(list = ls())
 
 library(dplyr)
-#library(OpenMx)
+library(OpenMx)
 library(xtable)
 
 data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
