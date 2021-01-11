@@ -154,7 +154,7 @@ t <- m+l+c
 
 # Matrix A 
 
-# Helper objects for object of manifest paths between acevars
+# Helper objects for object of manifest paths between acevars f 
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathB <- lower.tri(mat)
