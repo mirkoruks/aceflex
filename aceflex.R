@@ -9,17 +9,11 @@ data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artike
                       header = TRUE)
 summary(data_orig)
 
-acevars <- c("posbez", "schoolhigh", "iseiempmean")
-acevars1 <-    paste0(acevars,"_1") # ACE vars twin 1
-vars1 <- c(acevars1) # All variables for twin 1 
-acevars2 <-    paste0(acevars,"_2") # ACE vars twin 2
-vars2 <- c(acevars2) # All variables for twin 2
-acevarswide <- c(acevars1, acevars2) # ACE vars variable vector (input for SEM)
-varswide <- c(vars1,vars2)
 
 ## NEED TO SCALE BEFORE! 
 ## NEED TO CHECK MISSING DATA STRUCTURE BEFORE! 
   #data <- data[rowSums(is.na(data)) != ncol(data),]
+# CONSTANT COVARIATES MUST NOT HAVE A TWIN-SPECIFIC-SUFFIX -> AGE and NOT AGE_1!!
 
 #####################################################################################################     
 #####################################################################################################     
@@ -27,10 +21,10 @@ varswide <- c(vars1,vars2)
 #####################################################################################################     
 
 # aceflex function
-aceflex <- function(acevars, data, zyg, covvars=NULL) {
+aceflex <- function(acevars, data, zyg, sep, covvars=NULL) {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
-  stop("You need to load the OpenMx library: \nuse library(OpenMx)\n...Science is standing on the shoulders of giants and so does this function... :-)")
+  stop("You need to load the OpenMx library")
 }
   
 if (is.null(acevars)) {
@@ -44,6 +38,14 @@ if (is.null(zyg)) {
   stop("You need to specify a zygosity variable")
 }
   
+if (is.null(sep)) {
+  stop("You need to specify a separator. Example: The variable names are 'iq_t1' and 'iq_t2', then your seperator is '_t'")
+}
+  
+if (length(sep) > 1) {
+  stop("Please specify the separator with a string vector with one element only.")
+}
+  
 if (!is.null(covvars) & class(covvars)!= "character") {
   stop("Please, use a string vector to specify the covariates")
 }
@@ -52,10 +54,11 @@ if (!is.null(covvars) & class(covvars)!= "character") {
 output <- list()   
 
 ## check here if covariates are constants or not! 
+## check if acevars are constant or not!
 
 # Transform vars from long to wide
-acevars1 <-    paste0(acevars,"_1") # ACE vars twin 1
-acevars2 <-    paste0(acevars,"_2") # ACE vars twin 2
+acevars1 <-    paste0(acevars,sep,"1") # ACE vars twin 1
+acevars2 <-    paste0(acevars,sep,"2") # ACE vars twin 2
 
 if (is.null(covvars)) {
   covvars1 <- covvars
@@ -63,8 +66,8 @@ if (is.null(covvars)) {
 }
 # here comes the else if option for constant covariates!
 else {
-covvars1 <-    paste0(covvars,"_1") # Covariates twin 1
-covvars2 <-    paste0(covvars,"_2") # Covariates twin 2 
+covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
+covvars2 <-    paste0(covvars,sep,"2") # Covariates twin 2 
 }
 
 
@@ -82,7 +85,7 @@ variables <- c(acevars1, acevars2, covvars1, covvars2) # ACE vars variable vecto
 acevarscor <- mapply(cor,data[,acevars1],data[,acevars2], use = "pairwise.complete.obs")
 #acevarscor[3] <- .98
 s = attr(acevarscor, "names")
-s1 = unlist(sapply(strsplit(s, split='_', fixed=TRUE), function(x) (x[1])))
+s1 = unlist(sapply(strsplit(s, split=sep, fixed=TRUE), function(x) (x[1])))
 attr(acevarscor, "names") <- s1
 
 lowcorrelation <- acevarscor < 0.9 
@@ -174,25 +177,199 @@ pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   values = valuespathB,
                   labels = pathBlabel,
                   name = "b")
-print(pathB)
+pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
+
+
+
 cat("\n\n\n... Bis hierhin läuft alles durch! Weiter geht's! :-)")
 }
  
-aceflex(acevars = acevars, data = data_orig,zyg = "zyg")
+aceflex(acevars = acevars, data = data_orig,sep = "_",zyg = "zyg")
 
 
 
+sep <- "_"
+# Build elements to construct expected covariance matrix (RAM Notation)
+acevars <- c("posbez", "schoolhigh", "iseiempmean")
+
+acevars1 <-    paste0(acevars,sep,"1") # ACE vars twin 1
+acevars2 <-    paste0(acevars,sep,"2") # ACE vars twin 2
+acevarswide <- c(acevars1, acevars2) # ACE vars variable vector (input for SEM)
+
+covvars <- c("age","agediff")
+covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
+covvars2 <-    paste0(covvars,sep,"2") # Covariates twin 2
+covvarswide <- c(covvars1, covvars2)
+
+vars1 <- c(acevars1,covvars1) # All variables for twin 1 
+vars2 <- c(acevars2,covvars2) # All variables for twin 2
+
+
+
+varswide <- c(acevarswide,covvarswide) # all variables wide format
+
+# check if vars are constant
+
+#######
+  # 1. check if variables exist --> for acevars in wide format and for covvars in both long (without within-pair variance) and wide (with within-pair variance)
+#######
+
+existence <- function(variable) {
+  result <- NULL
+if(variable %in% colnames(data_orig))
+{
+  result <- NULL
+}
+else if (!(variable %in% colnames(data_orig))) {
+  result <- variable
+}
+}
+
+existenceerror <- function(result) {
+  if (!is.null(result)) {
+  stop(c("I could not find a variable(s) in the data frame corresponding to the following variable strings you gave me: ",paste(result, sep = " ", collapse = ", ")))
+  
+  }
+  else {
+    print("alles gut")
+  }
+  }
+
+
+  # 1a: Check for acevars (only in wide since they have to have within-pair-variance)
+existence_check_acevars <- unlist(lapply(acevarswide, existence))
+existenceerror(existence_check_acevars)
+  
+  # acevars mit falscher acevar
+    # acevarswide1 <- c(acevarswide,"falsch_1","falsch_2")
+    # existence_check_acevars <- unlist(lapply(acevarswide1, existence))
+    # existenceerror(existence_check_acevars)
+
+  # 1b: Check for covvars (can be in wide and long) -> 1. Check for wide -> 2. Check for Long if something does not appear as wide
+covvars <- c("age","agediff")
+covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
+covvars2 <-    paste0(covvars,sep,"2") # Covariates twin 2
+covvarswide <- c(covvars1, covvars2)
+
+existence_check_covvars1 <- unlist(lapply(covvarswide, existence))
+covvarswide_checked <- covvarswide[!covvarswide %in% existence_check_covvars1] # the covariates which exist in a wide format
+existence_check_covvars1 # for these variables there are no wide formatted variables in the data frame -> check if they are in long format
+
+if (!is.null(existence_check_covvars1)) { # if the condition is not fulfilled, then I could not find some of the wide variables -> maybe they are long variables!
+covvars_possibly_long_format <- covvarswide[covvarswide %in% existence_check_covvars1] 
+covvars_possibly_long_format <- unlist(sapply(strsplit(covvars_possibly_long_format, split=sep, fixed=TRUE), function(x) (x[1])))
+covvars_possibly_long_format <- unique(covvars_possibly_long_format)
+existence_check_covvars2 <- unlist(lapply(covvars_possibly_long_format, existence))
+existenceerror(existence_check_covvars2)
+covvarslong_checked <- covvars_possibly_long_format
+} else {
+covvarslong_checked <- NULL # if the condition is fulfilled, then all the covariates are in wide format and none in long
+}
+covvars <- c(covvarslong_checked,covvarswide_checked) # from now on: if a covariate ends with _1 or _2 -> it is wide!
+covvars1 <- covvars[grepl('_1', covvars)]
+covvars2 <- covvars[grepl('_2', covvars)]
+covvarswide <- c(covvars1, covvars2)
+covvars
+covvars1
+covvars2
+covvarswide
+
+  # 2. check if the wide formatted variables have within-pair-variance
+  # acevars
+data_orig$fakewide_1 <- runif(dim(data_orig)[1]) 
+ind <- which(data_orig$fakewide_1 %in% sample(data_orig$fakewide_1, 15))
+data_orig$fakewide_1[ind]<-NA
+data_orig$fakewide_2 <- data_orig$fakewide_1
+
+acevars1
+acevars2
+acevars1_fake <- c(acevars1,"fakewide_1")
+acevars2_fake <- c(acevars2,"fakewide_2")
+
+checkvariance <- function(v1,v2) {
+identicalcheck <- as.vector(colSums(ifelse(rna(data_orig[,v1])==rna(data_orig[,v2]), 0, 1)))
+if (0 %in% identicalcheck == TRUE) {
+ind <- identicalcheck==0
+result1 <- acevars1_fake[ind]
+result2 <- acevars2_fake[ind]
+result <- c(result1,result2)
+if (!is.null(result)) {
+  stop(c("The following acevars are identical and have no within-variance: ",paste(result, sep = " ", collapse = ", ")))
+}
+}
+else {
+  print("All the acevars have within-pair variance")
+}
+}
+
+# Die richtigen Vars
+checkvariance(acevars1,acevars2)
+# Die fake Vars
+checkvariance(acevars1_fake,acevars2_fake)
+
+
+a1 <- ifelse(rna(data_orig[,acevars1_fake])==rna(data_orig[,acevars2_fake]), 0, 1)
+a2 <- colSums(ifelse(rna(data_orig[,acevars1_fake])==rna(data_orig[,acevars2_fake]), 0, 1))
+
+colSums(a1)
+a2
+
+
+# Matrix A 
+nv <- length(acevars) # Vars per twin
+ntv <- nv*2 # Vars per twin pair
+m <- (nv*2) # Decomposed manifest variables
+c <- length(covvars) # Control variables 
+l <- 3*nv*2
+t <- m+l+c
 
 # Build elements to construct expected covariance matrix (RAM Notation)
 
 # Matrix A 
-pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathB,
-                  values = valuespathB,
-                  labels = pathBlabel,
-                  name = "b")
-pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
+# Helper objects for object of manifest paths between acevars f 
+mat <- matrix(0.3,nrow = nv,ncol = nv)
+mat
+freepathB <- lower.tri(mat)
+freepathB
+
+mat[upper.tri(mat, diag = TRUE)] <- 0
+valuespathB <- mat
+valuespathB
+
+nvstring <- as.character(1:nv)
+pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
+pathBlabel
+
+pathCovlabelFunction1 <- function(string) {
+paste0("b",rep(paste0(string,1:nv),2),rep(c(1,2),each=nv))
+}
+
+covvars2 <- c(paste0(covvars,"_1"),paste0(covvars,"_2"))
+c <- length(covvars2)
+
+pathCovlabelvariance <- function(string) {
+stringend <- substring(string, nchar(string)) == "1"
+  if  (stringend == TRUE) {
+c(paste0("b",string,1:nv),rep(NA,nv))
+  }
+else {
+  c(rep(NA,nv),paste0("b",string,1:nv))
+}
+}
+
+pathCovlabel <- as.matrix(sapply(covvars2,pathCovlabelvariance))
+pathCovlabel
+
+pathCovconstant <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
+                            free = TRUE,
+                            values = .3,
+                            labels = pathCovlabel,
+                            name = "pCov")
+
+
+pathCovconstant
 pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                     values = c(rep(.5,ntv),
                                rep(.5,nv),rep(0,nv),
@@ -928,4 +1105,3 @@ print.xtable(xtable(output_full,
              file = paste0("C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/Output/","biv_",iv,"2dummy",".tex"), 
              fileEncoding = "UTF-8",include.rownames = FALSE, include.colnames = FALSE)
 
->>>>>>> 6b2c1e6ff10920cb8194250c757ae35b4510bad8

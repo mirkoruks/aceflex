@@ -1,4 +1,11 @@
 
+pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = freepathB,
+                  values = valuespathB,
+                  labels = pathBlabel,
+                  name = "b")
+
+pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
 
 cor(data_orig[,acevarswide], use = "pairwise.complete.obs")
