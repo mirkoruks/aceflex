@@ -8,6 +8,7 @@ library(xtable)
 data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
                       header = TRUE)
 summary(data_orig)
+#data_orig <- data_orig %>% rename(negbez_t1=negbez_1) %>% rename(negbez_t2=negbez_2)  %>% rename(posbez_t1=posbez_1) %>% rename(posbez_t2=posbez_2)
 
 
 ## NEED TO SCALE BEFORE! 
@@ -92,7 +93,13 @@ acevars1 <-    paste0(acevars,sep,"1") # Covariates twin 1
 acevars2 <-    paste0(acevars,sep,"2") # Covariates twin 2
 acevarswide <- c(acevars1, acevars2)
 existence_check_acevars <- unlist(lapply(acevarswide, existence))
-existenceerror(existence_check_acevars)
+if (!is.null(existence_check_acevars)) {
+acevars_not_found <- unlist(sapply(strsplit(existence_check_acevars, split=sep, fixed=TRUE), function(x) (x[1])))
+acevars_not_found <- unique(acevars_not_found)
+#existenceerror(existence_check_acevars)
+} else {
+  acevars_not_found <- NULL
+}
 
   # 1b: Check for covvars (can be in wide and long) -> 1. Check for wide -> 2. Check for Long if something does not appear as wide
 if (!is.null(covvars) & class(covvars)== "character") {
@@ -109,7 +116,7 @@ covvars_possibly_long_format <- covvarswide[covvarswide %in% existence_check_cov
 covvars_possibly_long_format <- unlist(sapply(strsplit(covvars_possibly_long_format, split=sep, fixed=TRUE), function(x) (x[1])))
 covvars_possibly_long_format <- unique(covvars_possibly_long_format)
 existence_check_covvars2 <- unlist(lapply(covvars_possibly_long_format, existence))
-existenceerror(existence_check_covvars2)
+existenceerror(c(acevars_not_found,existence_check_covvars2))
 covvarslong_checked <- covvars_possibly_long_format
 } else {
 covvarslong_checked <- NULL # if the condition is fulfilled, then all the covariates are in wide format and none in long
@@ -118,8 +125,11 @@ if (length(covvarswide_checked)==0) {
   covvarswide_checked <- NULL
 }
 covvarsall <- c(covvarslong_checked,covvarswide_checked) # from now on: if a covariate ends with _1 or _2 -> it is wide!
-covvars1 <- covvarswide_checked[grepl('_1', covvarswide_checked)]
-covvars2 <- covvarswide_checked[grepl('_2', covvarswide_checked)]
+suf1 <- paste0(sep,"1")
+suf2 <- paste0(sep,"2")
+
+covvars1 <- covvarswide_checked[grepl(suf1, covvarswide_checked)]
+covvars2 <- covvarswide_checked[grepl(suf2, covvarswide_checked)]
 covvarswide <- c(covvars1, covvars2)
 } else if (is.null(covvars)) {
 covvarsall <- NULL
@@ -330,7 +340,57 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
-print(pathCov)
+
+mat <- matrix(0.3,nrow = nv,ncol = nv)
+mat
+freepathAC <- lower.tri(mat, diag = TRUE)
+freepathAC
+mat[upper.tri(mat, diag = FALSE)] <- 0
+valuespathAC <- mat
+valuespathAC
+mat[lower.tri(mat, diag = FALSE)] <- 0
+valuespathE <- mat
+valuespathE
+freepathE <- valuespathE == .3
+freepathE
+
+
+nvstring <- as.character(1:nv)
+pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
+pathAlabel
+
+pathClabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("c",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathClabel[upper.tri(pathClabel, diag = FALSE)] <- NA
+pathClabel
+
+pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
+pathElabel
+
+pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = freepathAC,
+                  values = valuespathAC,
+                  labels = pathAlabel,
+                  name = "a")
+pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = freepathAC,
+                  values = valuespathAC,
+                  labels = pathClabel,
+                  name = "c")
+pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = freepathE,
+                  values = valuespathE,
+                  labels = pathElabel,
+                  name = "e")
+pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
+pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
+                                              cbind(pZ,b)),pCov), name = "pM")
+pathACE <- mxAlgebra(expression = rbind(cbind(a,c,e,pZ,pZ,pZ),
+                                        cbind(pZ,pZ,pZ,a,c,e)), name = "pACE")
+matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
+                                     Bottom),
+                  name = "A")
 cat("\n\n\n... Bis hierhin läuft alles durch! Weiter geht's! :-)")
 }
 ############################################################################################################################################################
@@ -339,7 +399,7 @@ cat("\n\n\n... Bis hierhin läuft alles durch! Weiter geht's! :-)")
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("posbez","kultkapjahre"), covvars = c("age","negbez"),data = data_orig,sep = "_",zyg = "zyg")
+twinflex(acevars = c("kultkapjahre"), covvars = c("age"),data = data_orig,sep = "_",zyg = "zyg")
 
 varswide1 <- c(acevars1,NULL)
 svmeanacevars1 <- colMeans(data_orig[,acevars1], na.rm=TRUE)
@@ -347,15 +407,15 @@ svmeanacevars2 <- colMeans(data_orig[,acevars2], na.rm=TRUE)
 acevars_svmean <- rowMeans(cbind(svmeanacevars1,svmeanacevars2), na.rm=TRUE)
 
 
-sep <- "_"
+sep <- "_t"
 # Build elements to construct expected covariance matrix (RAM Notation)
-acevars <- c("posbez", "schoolhigh", "iseiempmean")
+acevars <- c("posbez","negbez")
 
 acevars1 <-    paste0(acevars,sep,"1") # ACE vars twin 1
 acevars2 <-    paste0(acevars,sep,"2") # ACE vars twin 2
 acevarswide <- c(acevars1, acevars2) # ACE vars variable vector (input for SEM)
 
-covvars <- c("age","agediff")
+covvars <- c("age",)
 covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
 covvars2 <-    paste0(covvars,sep,"2") # Covariates twin 2
 covvarswide <- c(covvars1, covvars2)
@@ -397,13 +457,21 @@ existenceerror <- function(result) {
 
   # 1a: Check for acevars (only in wide since they have to have within-pair-variance)
 existence_check_acevars <- unlist(lapply(acevarswide, existence))
+existence_check_acevars
+
+
+existence_check_acevars2 <- existence_check_acevars[grepl(c(suf1), existence_check_acevars)]
+
+
 existenceerror(existence_check_acevars)
 
-acevars_fake1 <- c(acevars1,"fake_1")
-acevars_fake2 <- c(acevars2,"fake_2")
+acevars_fake1 <- c(acevars1,"fake_t1")
+acevars_fake2 <- c(acevars2,"fake_t2")
 acevarswide_fake <- c(acevars_fake1,acevars_fake2)
 existence_check_acevars <- unlist(lapply(acevarswide_fake, existence))
-existenceerror(existence_check_acevars)
+acevars_not_found <- unlist(sapply(strsplit(existence_check_acevars, split=sep, fixed=TRUE), function(x) (x[1])))
+acevars_not_found <- unique(acevars_not_found)
+existenceerror(acevars_not_found)
   
   # acevars mit falscher acevar
     # acevarswide1 <- c(acevarswide,"falsch_1","falsch_2")
@@ -411,7 +479,7 @@ existenceerror(existence_check_acevars)
     # existenceerror(existence_check_acevars)
 
   # 1b: Check for covvars (can be in wide and long) -> 1. Check for wide -> 2. Check for Long if something does not appear as wide
-covvars <- c("age")
+covvars <- c("age",)
 covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
 covvars2 <-    paste0(covvars,sep,"2") # Covariates twin 2
 covvarswide <- c(covvars1, covvars2)
@@ -604,24 +672,65 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                                rep(FALSE,nv),rep(TRUE,nv)),
                     name = "pCov")
 
+covvars <- "age"
+acevars <- c("posbez")
+nv <- length(acevars) # Vars per twin
+ntv <- nv*2 # Vars per twin pair
+m <- (nv*2) # Decomposed manifest variables
+c <- length(covvars) # Control variables 
+l <- 3*nv*2
+t <- m+l+c
+
+mat <- matrix(0.3,nrow = nv,ncol = nv)
+mat
+
+freepathAC <- lower.tri(mat, diag = TRUE)
+freepathAC
+
+mat[upper.tri(mat, diag = FALSE)] <- 0
+valuespathAC <- mat
+valuespathAC
+
+mat[lower.tri(mat, diag = FALSE)] <- 0
+valuespathE <- mat
+valuespathE
+
+freepathE <- valuespathE == .3
+freepathE
+
+
+nvstring <- as.character(1:nv)
+pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
+pathAlabel
+
+pathClabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("c",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathClabel[upper.tri(pathClabel, diag = FALSE)] <- NA
+pathClabel
+
+pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
+pathElabel
+
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = TRUE,
-                  values = .8,
-                  labels = c("a11","a21","a22"),
-                  lbound = c(0.000001,NA,0.000001),
+                  free = freepathAC,
+                  values = valuespathAC,
+                  labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = TRUE,
-                  values = .8,
-                  labels = c("c11","c21","c22"),
-                  lbound = c(0.000001,NA,0.000001),
+                  free = freepathAC,
+                  values = valuespathAC,
+                  labels = pathClabel,
                   name = "c")
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = c(TRUE,FALSE,TRUE),
-                  values = c(.8,0,.8),
-                  labels = c("e11","e21","e22"),
-                  lbound = c(0.000001,NA,0.000001),
+                  free = freepathE,
+                  values = valuespathE,
+                  labels = pathElabel,
                   name = "e")
+print(pathA)
+print(pathC)
+print(pathE)
+
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
                                               cbind(pZ,b)),pCov), name = "pM")
@@ -631,7 +740,14 @@ matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
                                      Bottom),
                   name = "A")
 
-# Matrix S 
+##############################################################################
+##############################################################################
+##############################################################################
+# next step: Matrix S 
+##############################################################################
+##############################################################################
+##############################################################################
+# 
 
 lowerboundcovmat <- function(dimnumber) {
   mat1 <- matrix(NA, dimnumber, dimnumber)
@@ -855,7 +971,7 @@ print.xtable(xtable(output_full,
              file = paste0("C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/Output/","biv_",iv,"2dummy",".tex"), 
              fileEncoding = "UTF-8",include.rownames = FALSE, include.colnames = FALSE)
 
-=======
+
 # Trivariate Cholesky Model
 rm(list = ls())
 
