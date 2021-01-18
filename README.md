@@ -2,7 +2,7 @@
 A flexible function for biometric twin modelling
 
 Some remarks beforehand:
-- As my markdown skills improve (or I find a proper cheat sheet), this readme becomes prettier :-)
+- As my markdown skills improve (or I find a proper cheat sheet), this readme becomes prettier and more readable.
 - The explanation here remains short. Soon, you can find a more detailed documentation with examples [here](https://mirkoruks.github.io/).
 - It's still a beta version. So if you find some bugs or have any comments, questions or suggestions, I am happy if you send me a mail to mirko.ruks@uni-bielefeld.de
 
