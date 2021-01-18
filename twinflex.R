@@ -59,7 +59,6 @@ existenceerror <- function(result) {
   
   }
   else {
-    print("alles gut")
   }
   }
 
@@ -191,8 +190,8 @@ if (min(data$zyg) != 1 & max(data$zyg) != 2) {
 svmeanacevarswide1 <- colMeans(usedata[,acevars1, drop = FALSE], na.rm=TRUE)
 svmeanacevarswide2 <- colMeans(usedata[,acevars2, drop = FALSE], na.rm=TRUE)
 svmeanacevars <- rowMeans(cbind(svmeanacevarswide1, svmeanacevarswide2), na.rm=TRUE)
-cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
-print(svmeanacevars)
+#cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
+#print(svmeanacevars)
     # covvars
       # wide
 if (!is.null(covvarswide)) {
@@ -212,15 +211,15 @@ svmeancovvarslong <- NULL
 svmeancovvars <- c(svmeancovvarslong,svmeancovvarswide,svmeancovvarswide)
 svmean <- c(svmeanacevars,svmeanacevars,svmeancovvars)
 
-cat("\n\n\nStarting Values of the covvars for the mean vector\n\n")
-if (!is.null(svmeancovvars)) {
-print(svmeancovvars)
-} else {
-  cat("There are no covariates")
-}
+#cat("\n\n\nStarting Values of the covvars for the mean vector\n\n")
+#if (!is.null(svmeancovvars)) {
+#print(svmeancovvars)
+#} else {
+#  cat("There are no covariates")
+#}
 
-cat("\n\n\nStarting Values for the mean vector\n\n")
-print(svmean)
+#cat("\n\n\nStarting Values for the mean vector\n\n")
+#print(svmean)
 
 # define the MZ and DZ data sets
 mzData    <- subset(usedata, zyg==1, variables)
@@ -247,16 +246,13 @@ t <- m+l+c
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathB <- lower.tri(mat)
-freepathB
 
 mat[upper.tri(mat, diag = TRUE)] <- 0
 valuespathB <- mat
-valuespathB
 
 nvstring <- as.character(1:nv)
 pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
-pathBlabel
 
 pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathB,
@@ -312,7 +308,7 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
 pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
                             name = "pCov")  
 }
-print(pathCov)
+
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
@@ -322,23 +318,18 @@ valuespathAC <- mat
 valuespathAC
 mat[lower.tri(mat, diag = FALSE)] <- 0
 valuespathE <- mat
-valuespathE
-freepathE <- valuespathE == .3
-freepathE
 
+freepathE <- valuespathE == .3
 
 nvstring <- as.character(1:nv)
 pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
-pathAlabel
 
 pathClabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("c",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathClabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathClabel
 
 pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathElabel
 
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
@@ -371,7 +362,6 @@ lowerboundcovmat <- function(dimnumber) {
   mat1[upper.tri(mat1, diag = FALSE)] <- NaN
   mat1 <- as.vector(mat1)
   mat1 <- mat1[!is.nan(mat1)]
-  mat1
   return(mat1)
 }
 labelcovmat <- function(dimlabel) {
@@ -389,8 +379,7 @@ for (r in 1:nrow(labelmat))  {
   labelmat[upper.tri(labelmat, diag = FALSE)] <- NA
   labelmat <- as.vector(labelmat)
   labelmat <- labelmat[!is.na(labelmat)]
-  labelmat
-return(labelmat)
+  return(labelmat)
 }
 svS <- unname(as.matrix(var(data_orig[,covvarsall], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
 
