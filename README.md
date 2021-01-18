@@ -20,3 +20,6 @@ What's left are some OpenMx-specific arguments:
 - optimizer: There are three options: "SLSQP", "NPSOL" and "CSOLNP". You can check the OpenMx documentation or the OpenMx forum to figure out the differences. "SLSQP" is the default.
 - tryHard: If TRUE the function uses mxTryHard() to estimate the model, which means that it makes multiple attempts to fit the model with different starting values. It is the default, because sometimes bad starting values can ruin your model (although I tried to use wisely chosen starting values) 
 - tries: Here you can specify how many attempts you want for mxTryHard
+
+
+You can find the Kohler et al. paper here: https://doi.org/10.1080/19485565.2011.580619
