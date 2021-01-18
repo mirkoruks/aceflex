@@ -1,6 +1,11 @@
 # aceflex
 A flexible function for biometric twin modelling
 
+Some remarks beforehand:
+- As my markdown skills improve (or I find a proper cheat sheet), this readme becomes prettier :-)
+- The explanation here remains short. Soon, you can find a more detailed documentation with examples [here](https://mirkoruks.github.io/).
+- It's still a beta version. So if you find some bugs or have any comments, questions or suggestions, I am happy if you send me a mail to mirko.ruks@uni-bielefeld.de
+
 At the moment you can use the function to estimate univariate or multivariate ACE-models. The multivariate ACE models follow the Cholesky parametrization. You can enter covariates to the model as well. At the moment, the covariates can be included as part of the covariance matrix of the model. There is also the option to include them into the mean vector as so called "definition variables". Currently, there is no option for a threshold model needed for ordinal/binary endogenous variables, but it will not take too much time to include it. 
 
 So, this is the function with its arguments and the default values of the arguments (if existent):
