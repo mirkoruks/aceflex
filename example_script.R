@@ -26,7 +26,7 @@ twinflex_result
 
 
 # bivariate ACE: identical
-twinflex_result <- twinflex(acevars = c("posbez","negbez"),data = data_orig,sep = "_",zyg = "zyg", tryHard = FALSE)
+twinflex_result <- twinflex(acevars = c("posbez","negbez"),data = data_orig,sep = "_",zyg = "zyg", tryHard = FALSE, type = "chol")
 umx_result <- umxACE(selDVs = c("posbez","negbez"),sep = "_",mzData = mz, dzData = dz)
 summary(umx_result) 
 twinflex_result

@@ -1,5 +1,5 @@
 # twinflex function
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10) {
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10, type = "aceb") {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -255,11 +255,19 @@ nvstring <- as.character(1:nv)
 pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
 
+if (type == "aceb") {
 pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathB,
                   values = valuespathB,
                   labels = pathBlabel,
                   name = "b")
+} else if (type == "chol") {
+pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = FALSE,
+                  values = 0,
+                  labels = pathBlabel,
+                  name = "b")  
+}
 
 pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
@@ -343,11 +351,19 @@ pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   values = valuespathAC,
                   labels = pathClabel,
                   name = "c")
+if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
                   values = valuespathE,
                   labels = pathElabel,
                   name = "e")
+} else if (type == "chol") {
+pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
+                  free = freepathAC,
+                  values = valuespathAC,
+                  labels = pathElabel,
+                  name = "e")  
+}
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
 
 if (!is.null(covvars)) {
