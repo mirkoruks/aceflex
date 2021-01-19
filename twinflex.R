@@ -242,7 +242,8 @@ t <- m+l+c
 
 # Matrix A 
 
-# Helper objects for object of manifest paths between acevars f 
+# Helper objects for object of manifest paths between acevars 
+
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathB <- lower.tri(mat)
@@ -259,8 +260,11 @@ pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   values = valuespathB,
                   labels = pathBlabel,
                   name = "b")
+
 pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
+# path coefficients of covariates
+if (!is.null(covvars)) {
 pathCov_label_variance <- function(string) {
 stringend <- substring(string, nchar(string)) == "1"
   if  (stringend == TRUE) {
@@ -298,17 +302,15 @@ pathCovlabel <- cbind(pathCovlabelconstant,pathCovlabelvariance)
 pathCovvalue <- cbind(pathCovvalueconstant,pathCovvaluevariance)
 pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
 
-if (!is.null(covvars)) {
 pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             free = pathCovfree,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
-} else {
-pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
-                            name = "pCov")  
-}
 
+} else {
+  pathCov <- NULL
+}
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
@@ -347,8 +349,14 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   labels = pathElabel,
                   name = "e")
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
+
+if (!is.null(covvars)) {
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
-                                              cbind(pZ,b)),pCov), name = "pM")
+                                            cbind(pZ,b)),pCov), name = "pM")
+} else {
+  pathMan <- mxAlgebra(expression = rbind(cbind(b,pZ),
+                                              cbind(pZ,b)), name = "pM")
+}
 pathACE <- mxAlgebra(expression = rbind(cbind(a,c,e,pZ,pZ,pZ),
                                         cbind(pZ,pZ,pZ,a,c,e)), name = "pACE")
 matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
@@ -356,6 +364,7 @@ matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
                   name = "A")
 
 # MATRIX S
+if (!is.null(covvars)) {
 lowerboundcovmat <- function(dimnumber) {
   mat1 <- matrix(NA, dimnumber, dimnumber)
   diag(mat1) <- 0.00001
@@ -379,6 +388,7 @@ for (r in 1:nrow(labelmat))  {
   labelmat[upper.tri(labelmat, diag = FALSE)] <- NA
   labelmat <- as.vector(labelmat)
   labelmat <- labelmat[!is.na(labelmat)]
+  labelmat
   return(labelmat)
 }
 svS <- unname(as.matrix(var(data_orig[,covvarsall], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
@@ -387,7 +397,7 @@ if (!isSymmetric(svS)) {
 svS[upper.tri(svS)] <- t(svS)[upper.tri(svS)]
 }
 
-if (!is.null(covvars)) {
+
 covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  values = svS,
                  lbound = lowerboundcovmat(c), 
@@ -395,9 +405,9 @@ covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  free = TRUE,
                  name = "cCov")
 } else {
-covCovariates <- mxMatrix(type = "Symm", nrow = 0, ncol = 0, byrow = FALSE,
-                 name = "cCov")
+  covCovariates <- NULL
 }
+
 
 covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
 covManCov <- mxMatrix(type = "Zero", nrow = m, ncol = c, name = "cManCov")
@@ -410,9 +420,16 @@ covCMZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
 covCDZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
                    values = c(rep(.5,nv),rep(1,nv),rep(0,nv)),
                    name = "CDZ")
+
+if (!is.null(covvars)) {
 matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
                                         cbind(t(cManCov),cCov),
                                         t(cManCovACE)), name = "matSM")
+} else {
+matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
+                                        cbind(t(cManCov)),
+                                        t(cManCovACE)), name = "matSM")
+}
 
 matSMZ <- mxAlgebra(expression = cbind(matSM,rbind(cManCovACE,
                                                    cbind(V,CMZ),
@@ -491,7 +508,7 @@ fitACE    <- mxRun(modelACE)
 }
 # Summarize model
 sumACE    <- summary(fitACE) 
-print(sumACE)
+return(sumACE)
 }
 ############################################################################################################################################################
 ############################################################################################################################################################
