@@ -9,7 +9,9 @@ Some remarks beforehand:
 At the moment you can use the function to estimate univariate or multivariate ACE-models. The multivariate ACE models follow the Cholesky parametrization. You can enter covariates to the model as well. At the moment, the covariates can be included as part of the covariance matrix of the model. There is also the option to include them into the mean vector as so called "definition variables". Currently, there is no option for a threshold model needed for ordinal/binary endogenous variables, but it will not take too much time to include it. 
 
 So, this is the function with its arguments and the default values of the arguments (if existent):
-twinflex(acevars, data, zyg, sep, covvars = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10)
+<pre><code>twinflex(acevars, data, zyg, sep, covvars = NULL, type = "aceb", optimizer = "SLSQP", tryHard = TRUE, tries = 10)
+</code></pre>
+
 
 Some information about the arguments:
 - acevars: a vector of strings, like e.g. c("extraversion", "education"), with the variables that you want to use for the ACE decomposition. It is important that you enter the variables without the twin specific suffix (see the argument "sep").
