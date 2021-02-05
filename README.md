@@ -9,7 +9,9 @@ Some remarks beforehand:
 At the moment you can use the function to estimate univariate or multivariate ACE-models. The multivariate ACE models follow the Cholesky parametrization. You can enter covariates to the model as well. At the moment, the covariates can be included as part of the covariance matrix of the model. There is also the option to include them into the mean vector as so called "definition variables". Currently, there is no option for a threshold model needed for ordinal/binary endogenous variables, but it will not take too much time to include it. 
 
 So, this is the function with its arguments and the default values of the arguments (if existent):
-twinflex(acevars, data, zyg, sep, covvars = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10)
+<pre><code>twinflex(acevars, data, zyg, sep, covvars = NULL, type = "aceb", optimizer = "SLSQP", tryHard = TRUE, tries = 10)
+</code></pre>
+
 
 Some information about the arguments:
 - acevars: a vector of strings, like e.g. c("extraversion", "education"), with the variables that you want to use for the ACE decomposition. It is important that you enter the variables without the twin specific suffix (see the argument "sep").
@@ -20,6 +22,7 @@ Some information about the arguments:
 - zyg: A string with the name of the variable with the zygosity information. Note, that I assume that 1 means MZ and 2 means DZ, so make sure that you recode the zygosity variable accordingly.
 - sep: In the acevars argument you have to enter the variables without the twin-specific suffix. So instead of c("iqt1","iqt2), it's c("iq") and the separator ("t" in this case) can be entered as a string in the sep argument. If your variables are named like this: "iq_1" and "iq_2", the separator is "_"
 - covvars: Here you can enter the covariates. Like for the acevars, you must not enter the variables with the twin specific suffix. You can enter variables with or without within-twin-pair variance. The function will check if there is within-pair variance automatically. The default is "covvars = NULL", so if you don't enter covariates, the function assumes that there are none. 
+- type: Here you can choose the default model type for the multivariate case: "aceb" refers to the ACE-beta model (it's the default) and "chol" refers to the Cholesky model. Soon, I will ad another option "vc" which refers to the variance component model which has not any cross path but covariances between the ACE components (see [here](10.1007/s10519-018-9942-y) why you may want to choose the "vc" option instead of the "chol" option).
 
 What's left are some OpenMx-specific arguments:
 - optimizer: There are three options: "SLSQP", "NPSOL" and "CSOLNP". You can check the OpenMx documentation or the OpenMx forum to figure out the differences. "SLSQP" is the default.
