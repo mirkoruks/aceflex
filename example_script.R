@@ -5,16 +5,17 @@ rm(list = ls())
 library(OpenMx)
 library(umx)
 library(dplyr)
-data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
-                      header = TRUE)
-summary(data_orig)
+data("twinData")
 
+summary(twinData)
+
+data <- twinData %>% mutate(zyg_r = )
 source("C:/Users/Besitzer/Documents/Arbeit/Twinlife/twinflex/Git/twinflex.R")
-twinflex_result <- twinflex(acevars = "posbez",data = data_orig,sep = "_",zyg = "zyg", tryHard = FALSE)
+twinflex_result <- twinflex(acevars = "posbez",data = twinData,sep = "_",zyg = "zyg", tryHard = FALSE)
 
-table(data_orig$zyg)
-dz=data_orig[data_orig$zyg==2,]
-mz=data_orig[data_orig$zyg==1,]
+table(twinData$zyg)
+dz=twinData[twinData$zyg==2,]
+mz=twinData[twinData$zyg==1,]
 
 
 
@@ -26,7 +27,7 @@ twinflex_result
 
 
 # bivariate ACE: identical
-twinflex_result <- twinflex(acevars = c("posbez","negbez"),data = data_orig,sep = "_",zyg = "zyg", tryHard = FALSE, type = "chol")
+twinflex_result <- twinflex(acevars = c("posbez","negbez"),data = data,sep = "_",zyg = "zyg", tryHard = FALSE, type = "chol")
 umx_result <- umxACE(selDVs = c("posbez","negbez"),sep = "_",mzData = mz, dzData = dz)
 summary(umx_result) 
 twinflex_result

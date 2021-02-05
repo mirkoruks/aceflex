@@ -22,7 +22,7 @@ summary(data_orig)
 ############################################################################################################################################################   
 
 # twinflex function
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10) {
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10) {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -82,7 +82,7 @@ existenceerror <- function(result) {
   
   }
   else {
-    print("alles gut")
+    #print("alles gut")
   }
   }
 
@@ -177,14 +177,14 @@ print(variables)
 
 rna <- function(x) replace(x, is.na(x), "")
 checkvariance <- function(v1,v2) {
-identicalcheck <- as.vector(colSums(ifelse(rna(data_orig[,v1, drop = FALSE])==rna(data_orig[,v2, drop = FALSE]), 0, 1)))
+identicalcheck <- as.vector(colSums(ifelse(rna(data[,v1, drop = FALSE])==rna(data[,v2, drop = FALSE]), 0, 1)))
 if (0 %in% identicalcheck == TRUE) {
 ind <- identicalcheck==0
 result1 <- v1[ind]
 result2 <- v2[ind]
 result <- c(result1,result2)
 if (!is.null(result)) {
-  stop(c("The following acevars are identical and have no within-variance: ",paste(result, sep = " ", collapse = ", ")))
+  stop(c("The following acevars have no within-variance: ",paste(result, sep = " ", collapse = ", ")))
 }
 }
 else {
@@ -193,16 +193,13 @@ else {
 }
 checkvariance(varswide1,varswide2)
 
-
-
-
 usevariables <- c(variables,"zyg")
 usedata <- subset(data, select = c(usevariables)) # Data set with only variables used for the model
 cat("\n\n\nSummary total Data\n\n")
 print(summary(usedata))
 
 # Check if zygosity variable is coded correctly
-if (min(data$zyg) != 1 & max(data$zyg) != 2) {
+if (min(usedata$zyg) != 1 & max(usedata$zyg) != 2) {
           stop("Zygosity variable must be coded as follows: 1 = MZ, 2 = DZ. Please, recode the zygosity variable.")
 }
 
@@ -245,6 +242,124 @@ print(svmeancovvars)
 cat("\n\n\nStarting Values for the mean vector\n\n")
 print(svmean)
 
+if (!is.null(ordinal)) {
+# Check for categorical variables in acevars 
+if (!is.null(ordinal) & class(ordinal)== "character") {
+ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
+ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
+}
+ordinalwide <- c(ordinal1,ordinal2)
+existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
+existenceerror(existence_check_ordvars)
+
+# check number of levels of ordinal variable (crucial question is: ordinal or binary?) -> necessary for later conditional statements 
+nlevels <- function(variable) { 
+nolevels <- sort(unique(usedata[,variable]))
+}
+
+llevels <- function(variable) { 
+length <- length(sort(unique(usedata[,variable])))
+result <- NULL
+if(length>1)
+{
+  result <- NULL
+}
+else if (length == 1) {
+  result <- variable
+}
+
+}
+
+levelserror <- function(result) {
+  if (!is.null(result)) {
+  stop(c("Check your ordinal variables.. The following variables have only one category: ",paste(result, sep = " ", collapse = ", ")))
+  
+  }
+  else {
+    #print("alles gut")
+  }
+  }
+levelslist <- lapply(ordinalwide, nlevels)
+levelserror(unlist(lapply(ordinalwide, llevels)))
+
+usedata[,ordinalwide] <- mxFactor(usedata[,ordinalwide], levels = levelslist)
+print(summary(usedata))
+ordinallength <- unlist(lapply(levelslist,length))
+if (2 %in% ordinallength) {
+    stop("Sorry, at the moment the function does not support binary variables")
+}
+# Define objects for threshold matrix
+nTh       <- ordinallength-1 # No of thresholds
+ntvo      <- length(ordinalwide) # Total No of ordinal vars
+
+freeThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
+values <- NULL
+    if(nt == 1) {
+    values <- c(TRUE,rep(FALSE,(max(nTh)-1))) 
+    }
+    else if (nt > 1 & nt < max(nTh)) {
+       values <- c(rep(FALSE,2),rep(TRUE,(nt-2)),rep(FALSE,(max(nTh)-nt)))        
+    }
+    else if (nt > 1 & nt == max(nTh)) {
+       values <- c(rep(FALSE,2),rep(TRUE,(nt-2))) 
+    }
+}
+valThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
+values <- NULL
+    if(nt == 1) {
+    values <- c(.5,rep(0,(max(nTh)-1))) # unused thresholds set to zero (check: post #20 by T. Bates in: https://openmx.ssri.psu.edu/node/4538)
+    }
+    else if (nt > 1 & nt < max(nTh)) {
+      values <- c(0,rep(1,(nt-1)),rep(0,(max(nTh)-nt)))           
+    }
+    else if (nt > 1 & nt == max(nTh)) {
+       values <- c(0,rep(1,(nt-1))) 
+    }
+}
+
+lbThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
+lb <- NULL
+    if(nt == 1) {
+    lb <- rep(NA,max(nTh))
+    }
+    else if (nt > 1 & nt < max(nTh)) {
+      lb <- c(-3,rep(.0001,(nt-1)),rep(NA,(max(nTh)-nt)))         
+    }
+    else if (nt > 1 & nt == max(nTh)) {
+       lb <- c(-3,rep(.0001,(nt-1)))  
+    }
+}
+
+labelThresholds <- function(vars) { # assumes mxMatrix(byrow = FALSE)
+labels <- NULL
+noTh <- (length(levels(usedata[,vars])))-1
+varsnew <- unlist(sapply(strsplit(vars, split=sep, fixed=TRUE), function(x) (x[1])))
+    if (noTh == 1) { # binary
+        labels <- c(paste0("th",varsnew,1),rep(NA,(max(nTh)-1)))
+    }
+    else if (noTh > 1 & noTh < max(nTh)) { # ordinal
+        labels <- paste0("th",varsnew,(1:noTh),rep(NA,(max(nTh)-noTh)))
+    }
+    else if (noTh > 1 & noTh == max(nTh)) { # ordinal
+        labels <- paste0("th",varsnew,(1:noTh))
+    }
+}
+
+frTh <- unlist(lapply(nTh, freeThresholds))
+svTh <- unlist(lapply(nTh, valThresholds))
+lbTh <- unlist(lapply(nTh, lbThresholds))
+labTh <- unlist(lapply(ordinalwide, labelThresholds))
+
+# Thresholds definieren
+thinG     <- mxMatrix(type="Full", nrow=max(nTh), ncol=ntvo, free=frTh, byrow = FALSE, values=svTh, lbound=lbTh, labels=labTh, name="thinG") # matrix of threshold increments
+inc       <- mxMatrix(type="Lower", nrow=max(nTh), ncol=max(nTh), free=FALSE, values=1, name="inc") # matrix of lower 1
+# Example how the premultiplication with a matrix of lower 1 ensures the ordering of the thresholds
+#mat1 <- matrix(svTh, nrow=max(nTh), ncol=ntvo)
+#lower <- matrix(1,nrow=max(nTh), ncol=max(nTh))
+#lower[upper.tri(lower)] <- 0
+threG     <- mxAlgebra(expression= inc %*% thinG, name="threG") # Multiplikation stellt sicher, dass Th3>Th2>Th1, wobei Th2>Th1 schon durch die Fixierung auf 0, bzw. 1 gesichert ist!
+#umxThresholdMatrix(df = data, selDVs = ordinalwide, sep = "_", method = "Mehta")
+}
 # define the MZ and DZ data sets
 mzData    <- subset(usedata, zyg==1, variables)
 dzData    <- subset(usedata, zyg==2, variables)
@@ -252,7 +367,6 @@ cat("\n\n\nSummary MZ Data\n\n")
 print(summary(mzData))
 cat("\n\n\nSummary DZ Data\n\n")
 print(summary(dzData))
-
 # Shortcuts for the matrix dimensions
 # No. of Variables
 nv <- length(acevars) # Vars per twin
@@ -335,7 +449,6 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
 pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
                             name = "pCov")  
 }
-print(pathCov)
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
@@ -465,7 +578,11 @@ matI <- mxMatrix(type = "Iden", nrow = t, ncol = t, name = "I")
 covMZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SMZ%*%t(solve(I-A))%*%t(Filter), name = "expCovMZ")
 covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Filter), name = "expCovDZ")
 
+## VARIANCE CONSTRAINT FOR BINARY VARIABLES ! 
+
 # Mean Matrix
+#### CHECK FOR BINARY VARIABLES ! CONSTRAIN TO ZERO!
+#### CHECK FOR STARTING VALUES OF ORDINAL VARIABLES -> DIFFERENT SCALE
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(variables, split=sep, fixed=TRUE), function(x) (x[1])))))
 meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
 meanlabel <- c(meanmanifestlabel,meanacelabel)
@@ -474,7 +591,6 @@ matM <- mxMatrix(type = "Full", nrow = t, ncol = 1,
                  labels = c(meanmanifestlabel,meanacelabel),
                  values = c(svmean,rep(0,l)), 
                  name = "M")
-#print(matM)
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
 
 # Define data object
@@ -482,10 +598,18 @@ dataMZ    <- mxData(observed=mzData, type="raw")
 dataDZ    <- mxData(observed=dzData, type="raw")
 
 # Define expectation objects 
+if (!is.null(ordinal)) {
+expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
+                                 dimnames=variables)
+expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
+                                 dimnames=variables)
+}
+else {
 expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean",
                                  dimnames=variables)
 expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean", 
-                                 dimnames=variables)
+                                 dimnames=variables)  
+}
 # Fit function (FIML)
 fitfun     <- mxFitFunctionML()
 
@@ -494,6 +618,9 @@ pars      <- list(pathB, pathA, pathC, pathE,pathCov, pathZ, matA, pathMan, path
                   covCovariates, covMan, covManCov, covManCovACE, covV,matSMan,
                   filterI, filterZ, matF, matI,
                   matM, mean, pathBottom)
+if (!is.null(ordinal)) {
+pars <- c(pars,c(thinG,inc,threG))
+}
 
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
@@ -507,7 +634,7 @@ if (optimizer == "SLSQP") {
   mxOption(NULL , 'Default optimizer' , 'SLSQP')
 } else if (optimizer == "NPSOL") {
   mxOption(NULL , 'Default optimizer' , 'NPSOL')
-} else if (optimizer == "CSOLNP") {
+} else if (optimizer == "CSOLNP" | (!is.null(ordinal))) {
 mxOption(NULL , 'Default optimizer' , 'CSOLNP')
 }
 
@@ -518,7 +645,12 @@ set.seed(1)
 #modelACE <- omxAssignFirstParameters(modelACE) # randomly select one starting value if one free parameter has been assigned with more than one starting value
 
 if (tryHard == TRUE){
-fitACE    <- mxTryHard(modelACE, extraTries = tries, exhaustive = TRUE)
+  if (!is.null(ordinal)) {
+fitACE    <- mxTryHardOrdinal(modelACE, extraTries = 10, exhaustive = FALSE)
+  }
+  else {
+fitACE    <- mxTryHard(modelACE, extraTries = 10, exhaustive = FALSE)
+  }
 fitACE <- mxRun(fitACE)
 } else {
 fitACE    <- mxRun(modelACE)  
@@ -533,7 +665,7 @@ print(sumACE)
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("kultkapjahre"),covvars = c("age","posbez"),data = data_orig,sep = "_",zyg = "zyg")
+twinflex(acevars = c("schoolhigh","kultkapjahre"),covvars = c("age","posbez"),ordinal = "schoolhigh", data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
 
 sep <- "_"
 acevars <- c("kultkapjahre","negbez")
