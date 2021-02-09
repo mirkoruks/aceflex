@@ -20,7 +20,6 @@ summary(data_orig)
 #################################################### BEGIN OF FUNCTION #####################################################################################
 ############################################################################################################################################################
 ############################################################################################################################################################   
-
 # twinflex function
 twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10) {
 
@@ -80,9 +79,6 @@ existenceerror <- function(result) {
   if (!is.null(result)) {
   stop(c("I could not find a variable(s) in the data frame corresponding to the following variable strings you gave me: ",paste(result, sep = " ", collapse = ", ")))
   
-  }
-  else {
-    #print("alles gut")
   }
   }
 
@@ -202,8 +198,22 @@ print(summary(usedata))
 if (min(usedata$zyg) != 1 & max(usedata$zyg) != 2) {
           stop("Zygosity variable must be coded as follows: 1 = MZ, 2 = DZ. Please, recode the zygosity variable.")
 }
-
-
+if (!is.null(ordinal)) {
+# Check for categorical variables in acevars 
+if (!is.null(ordinal) & class(ordinal)== "character") {
+ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
+ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
+}
+ordinalwide <- c(ordinal1,ordinal2)
+existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
+existenceerror(existence_check_ordvars)
+}
+# flag ordinal variables in acevars
+checkcorrespondence <- function(check,comparison) {
+    checkresult <- NULL
+    checkresult <- check %in% comparison
+    checkresult <- TRUE %in% checkresult
+}
 
 # Starting Values
   # Means Vector
@@ -211,8 +221,16 @@ if (min(usedata$zyg) != 1 & max(usedata$zyg) != 2) {
 svmeanacevarswide1 <- colMeans(usedata[,acevars1, drop = FALSE], na.rm=TRUE)
 svmeanacevarswide2 <- colMeans(usedata[,acevars2, drop = FALSE], na.rm=TRUE)
 svmeanacevars <- rowMeans(cbind(svmeanacevarswide1, svmeanacevarswide2), na.rm=TRUE)
+#print(str(svmeanacevars))
+if (!is.null(ordinal)) {
+  flagordinal <- unlist(lapply(acevars1,checkcorrespondence, check = ordinalwide))
+  svmeanacevars[flagordinal] <- 0
+}
+print(flagordinal)
+print(svmeanacevars)
 cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
 print(svmeanacevars)
+stop()
     # covvars
       # wide
 if (!is.null(covvarswide)) {
@@ -241,17 +259,7 @@ print(svmeancovvars)
 
 cat("\n\n\nStarting Values for the mean vector\n\n")
 print(svmean)
-
 if (!is.null(ordinal)) {
-# Check for categorical variables in acevars 
-if (!is.null(ordinal) & class(ordinal)== "character") {
-ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
-ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
-}
-ordinalwide <- c(ordinal1,ordinal2)
-existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
-existenceerror(existence_check_ordvars)
-
 # check number of levels of ordinal variable (crucial question is: ordinal or binary?) -> necessary for later conditional statements 
 nlevels <- function(variable) { 
 nolevels <- sort(unique(usedata[,variable]))
@@ -275,9 +283,6 @@ levelserror <- function(result) {
   stop(c("Check your ordinal variables.. The following variables have only one category: ",paste(result, sep = " ", collapse = ", ")))
   
   }
-  else {
-    #print("alles gut")
-  }
   }
 levelslist <- lapply(ordinalwide, nlevels)
 levelserror(unlist(lapply(ordinalwide, llevels)))
@@ -290,6 +295,8 @@ if (2 %in% ordinallength) {
 }
 # Define objects for threshold matrix
 nTh       <- ordinallength-1 # No of thresholds
+print(nTh)
+stop()
 ntvo      <- length(ordinalwide) # Total No of ordinal vars
 
 freeThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
@@ -581,11 +588,13 @@ covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Fi
 ## VARIANCE CONSTRAINT FOR BINARY VARIABLES ! 
 
 # Mean Matrix
-#### CHECK FOR BINARY VARIABLES ! CONSTRAIN TO ZERO!
-#### CHECK FOR STARTING VALUES OF ORDINAL VARIABLES -> DIFFERENT SCALE
+#### CHECK FOR BINARY VARIABLES ! CONSTRAIN TO ZERO! (weiter oben!)
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(variables, split=sep, fixed=TRUE), function(x) (x[1])))))
+print(meanmanifestlabel)
 meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
 meanlabel <- c(meanmanifestlabel,meanacelabel)
+print(svmean)
+
 matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
                  free = c(rep(TRUE,m+c),rep(FALSE,l)), 
                  labels = c(meanmanifestlabel,meanacelabel),
@@ -665,7 +674,7 @@ print(sumACE)
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("schoolhigh","kultkapjahre"),covvars = c("age","posbez"),ordinal = "schoolhigh", data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
+twinflex(acevars = c("schoolhigh","kultkapjahre"),covvars = c("age","posbez"),ordinal = "schoolhigh", data = data_orig,sep = "_",tryHard = FALSE, zyg = "zyg")
 
 sep <- "_"
 acevars <- c("kultkapjahre","negbez")
@@ -692,9 +701,6 @@ existenceerror <- function(result) {
   if (!is.null(result)) {
   stop(c("I could not find a variable(s) in the data frame corresponding to the following variable strings you gave me: ",paste(result, sep = " ", collapse = ", ")))
   
-  }
-  else {
-    print("alles gut")
   }
   }
 
