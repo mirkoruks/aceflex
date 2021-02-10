@@ -1,4 +1,14 @@
-ordinal <- c("schoolhigh","ado","ady")
+rm(list = ls())
+
+library(dplyr)
+library(OpenMx)
+library(xtable)
+
+data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
+                      header = TRUE)
+summary(data_orig)
+
+ordinal <- c("schoolhigh","ado")
 sep = "_"
 data <- data_orig
 existence <- function(variable) {
@@ -150,8 +160,8 @@ threG     <- mxAlgebra(expression= inc %*% thinG, name="threG") # Multiplikation
 
 
 # flag binary variables
-acevars <- c("schoolhigh_1","ado_1","schoolhigh_2","ado_2")
-covvars <- c("age","sex")
+acevars <- c("ado_1","ado_2")
+covvars <- NULL
 variables <- c(acevars,covvars)
 binarytrue <- nTh == 1
 binaryvar <- ordinalwide[binarytrue]
@@ -162,43 +172,48 @@ checkcorrespondence <- function(check,comparison) {
     checkresult <- check %in% comparison
     checkresult <- TRUE %in% checkresult
 }
-binaryace <- unlist(lapply(acevars,checkcorrespondence, check = binaryvar))
 
-binaryrest <- rep(FALSE,(length(variables)))
+if (2 %in% ordinallength) {
+binaryace <- unlist(lapply(acevars,checkcorrespondence, check = binaryvar))
+binaryrest <- rep(FALSE,(length(variables)-length(acevars)))
 binaryrest
 binaryflag <- c(binaryace,binaryrest)
 binaryflag
-
-
-binaryflag == FALSE
 # fixed means
 binaryflag # FALSE = Non binary; TRUE = binary -> for the mean estimation we can reverse it 
-if (2 %in% ordinallength) { # if there are any binary variables
-  svmean_manifests <- binaryflag == FALSE
+ # if there are any binary variables
+svmean_manifests <- binaryflag == FALSE
+svmean_manifests # insert this vector into the "free"-argument if there are binary variables in the model
 }
-svmean_manifests
 
+
+#if (2 %in% ordinallength) {
 # fixed variances
-# example
-# 4 variables in total
-expcov <- matrix(1:16,4,4) # equals expected covariance matrix
-expcov
-
 # 2 are binary (1st and 3rd)  
   # No of rows = no of binary vars
 nrowfilterbinary <- sum(binaryflag)
   # No of cols = vars in total
 ncolsfilterbinary <- length(variables)
+ncolsfilterbinary
   # 1 if var = binary and 0 if not
+# function: while row
+bfilter <- function(x,vec) {
+  result <- list()
+  vec[-x] <- 0
+  result <- vec
+  }
+
 valfilterbinary <- binaryflag
-first <- min(which(valfilterbinary == TRUE))
-valfilterbinary[-first] <- FALSE
 valfilterbinary[valfilterbinary== TRUE] <- 1
+flag <- which(valfilterbinary == 1)
+filtermatvalues <- matrix(unlist(lapply(flag, bfilter, vec = valfilterbinary)),nrow = nrowfilterbinary, ncol = length(valfilterbinary), byrow = TRUE)
 
+filtermatbin <- mxMatrix(type = "Full", values = filtermatvalues, name = "fmatbin")
+binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZ %*% t(fmatbin), name = "binCov")
+one <- mxMatrix(type = "Unit", nrow = length(valfilterbinary), ncol = 1, name = "Unit")
+var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1")
 
-filtermat <- matrix(c(1,0,0,0,0,0,1,0),2,4, byrow = TRUE)
-filtermat
-onlybinary <- filtermat %*%expcov %*% t(filtermat)
+#}
 # here are the variances of the binaries that we have to constrain to zero! so we have to apply the mxConstraint to this matrix!
 diag(onlybinary) 
 

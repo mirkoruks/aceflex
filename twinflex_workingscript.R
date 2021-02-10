@@ -9,11 +9,16 @@ data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artike
 summary(data_orig)
 #data_orig <- data_orig %>% rename(negbez_t1=negbez_1) %>% rename(negbez_t2=negbez_2)  %>% rename(posbez_t1=posbez_1) %>% rename(posbez_t2=posbez_2)
 
+# create binary
+data_orig <- data_orig %>% 
+  mutate(schoolbin_1 = ifelse(schoolhigh_1 %in% c(1,2), 1,
+                       ifelse(schoolhigh_1 %in% c(3,4), 2, NA))) %>% 
+  mutate(schoolbin_2 = ifelse(schoolhigh_2 %in% c(1,2), 1,
+                       ifelse(schoolhigh_2 %in% c(3,4), 2, NA)))
 
-## NEED TO SCALE BEFORE! 
-## NEED TO CHECK MISSING DATA STRUCTURE BEFORE! 
-  #data <- data[rowSums(is.na(data)) != ncol(data),]
-# CONSTANT COVARIATES MUST NOT HAVE A TWIN-SPECIFIC-SUFFIX -> AGE and NOT AGE_1!!
+## TO DO
+  # CHECK THRESHOLDS FOR BINARY VARIABLES! FREE-ARGUMENT DOES NOT WORK
+  # CHECK MODEL WITHOUT COVARIATES! DOES NOT WORK
 
 ############################################################################################################################################################
 ############################################################################################################################################################
@@ -226,11 +231,9 @@ if (!is.null(ordinal)) {
   flagordinal <- unlist(lapply(acevars1,checkcorrespondence, check = ordinalwide))
   svmeanacevars[flagordinal] <- 0
 }
-print(flagordinal)
 print(svmeanacevars)
 cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
 print(svmeanacevars)
-stop()
     # covvars
       # wide
 if (!is.null(covvarswide)) {
@@ -290,13 +293,12 @@ levelserror(unlist(lapply(ordinalwide, llevels)))
 usedata[,ordinalwide] <- mxFactor(usedata[,ordinalwide], levels = levelslist)
 print(summary(usedata))
 ordinallength <- unlist(lapply(levelslist,length))
-if (2 %in% ordinallength) {
-    stop("Sorry, at the moment the function does not support binary variables")
-}
+#if (2 %in% ordinallength) {
+#    stop("Sorry, at the moment the function does not support binary variables")
+#}
 # Define objects for threshold matrix
 nTh       <- ordinallength-1 # No of thresholds
 print(nTh)
-stop()
 ntvo      <- length(ordinalwide) # Total No of ordinal vars
 
 freeThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
@@ -359,6 +361,7 @@ labTh <- unlist(lapply(ordinalwide, labelThresholds))
 
 # Thresholds definieren
 thinG     <- mxMatrix(type="Full", nrow=max(nTh), ncol=ntvo, free=frTh, byrow = FALSE, values=svTh, lbound=lbTh, labels=labTh, name="thinG") # matrix of threshold increments
+print(thinG)
 inc       <- mxMatrix(type="Lower", nrow=max(nTh), ncol=max(nTh), free=FALSE, values=1, name="inc") # matrix of lower 1
 # Example how the premultiplication with a matrix of lower 1 ensures the ordering of the thresholds
 #mat1 <- matrix(svTh, nrow=max(nTh), ncol=ntvo)
@@ -588,24 +591,84 @@ covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Fi
 ## VARIANCE CONSTRAINT FOR BINARY VARIABLES ! 
 
 # Mean Matrix
-#### CHECK FOR BINARY VARIABLES ! CONSTRAIN TO ZERO! (weiter oben!)
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(variables, split=sep, fixed=TRUE), function(x) (x[1])))))
 print(meanmanifestlabel)
 meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
 meanlabel <- c(meanmanifestlabel,meanacelabel)
 print(svmean)
-
 matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
                  free = c(rep(TRUE,m+c),rep(FALSE,l)), 
                  labels = c(meanmanifestlabel,meanacelabel),
                  values = c(svmean,rep(0,l)), 
                  name = "M")
+if (!is.null(ordinal)) {
+if (2 %in% ordinallength) {
+binarytrue <- nTh == 1
+binaryvar <- ordinalwide[binarytrue]
+binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
+binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
+binaryflag <- c(binaryace,binaryrest)
+# fixed means
+binaryflag # FALSE = Non binary; TRUE = binary -> for the mean estimation we can reverse it 
+ # if there are any binary variables
+svmean_manifests <- binaryflag == FALSE
+svmean_manifests # insert this vector into the "free"-argument if there are binary variables in the model
+matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
+                 free = c(svmean_manifests,rep(FALSE,l)), 
+                 labels = c(meanmanifestlabel,meanacelabel),
+                 values = c(svmean,rep(0,l)), 
+                 name = "M")
+}
+}
+print(matM)
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
 
 # Define data object
 dataMZ    <- mxData(observed=mzData, type="raw")
 dataDZ    <- mxData(observed=dzData, type="raw")
 
+# Variance constraint for binary variables
+if (!is.null(ordinal)) {
+if (2 %in% ordinallength) {
+# fixed variances
+# 2 are binary (1st and 3rd)  
+  # No of rows = no of binary vars
+  cat("Hallo hier!")
+  print(binaryflag)
+nrowfilterbinary <- sum(binaryflag)
+print(nrowfilterbinary)
+  # No of cols = vars in total
+ncolsfilterbinary <- length(variables)
+print(ncolsfilterbinary)
+  # 1 if var = binary and 0 if not
+# function: while row
+bfilter <- function(x,vec) {
+  result <- list()
+  vec[-x] <- 0
+  result <- vec
+  }
+
+valfilterbinary <- binaryflag
+valfilterbinary[valfilterbinary== TRUE] <- 1
+
+print(valfilterbinary)
+flag <- which(valfilterbinary == 1)
+print(flag)
+print(variables)
+filtermatvalues <- matrix(unlist(lapply(flag, bfilter, vec = valfilterbinary)),nrow = nrowfilterbinary, ncol = length(valfilterbinary), byrow = TRUE)
+
+filtermatbin <- mxMatrix(type = "Full", values = filtermatvalues, name = "fmatbin")
+print(length(valfilterbinary))
+print(filtermatbin)
+binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZ %*% t(fmatbin), name = "binCov")
+
+one <- mxMatrix(type = "Unit", nrow = nrowfilterbinary, ncol = 1, name = "Unit")
+cat("Hallo hier")
+print(one)
+var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1")
+binary <- c(filtermatbin,binarycov,one,var1)
+}
+}
 # Define expectation objects 
 if (!is.null(ordinal)) {
 expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
@@ -631,9 +694,19 @@ if (!is.null(ordinal)) {
 pars <- c(pars,c(thinG,inc,threG))
 }
 
+#if (2 %in% ordinallength) {
+#pars <- c(pars,binary)
+#}
+
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="DZ")
+if (!is.null(ordinal)) {
+if (2 %in% ordinallength) {
+  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
+modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,name="DZ")
+}
+}
 multi     <- mxFitFunctionMultigroup(c("MZ","DZ"))
 
 # overall model object
@@ -674,7 +747,7 @@ print(sumACE)
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("schoolhigh","kultkapjahre"),covvars = c("age","posbez"),ordinal = "schoolhigh", data = data_orig,sep = "_",tryHard = FALSE, zyg = "zyg")
+twinflex(acevars = c("schoolbin"), ordinal = "schoolbin", covvars = "negbez", data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
 
 sep <- "_"
 acevars <- c("kultkapjahre","negbez")
