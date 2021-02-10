@@ -17,8 +17,7 @@ data_orig <- data_orig %>%
                        ifelse(schoolhigh_2 %in% c(3,4), 2, NA)))
 
 ## TO DO
-  # CHECK THRESHOLDS FOR BINARY VARIABLES! FREE-ARGUMENT DOES NOT WORK
-  # CHECK MODEL WITHOUT COVARIATES! DOES NOT WORK
+  # CHECK COVARIATE SECTION! DOES NOT WORK WITHOUT AND PROBLEMS DISTINGUISHING WITHIN-VARIANCE?
 
 ############################################################################################################################################################
 ############################################################################################################################################################
@@ -26,7 +25,7 @@ data_orig <- data_orig %>%
 ############################################################################################################################################################
 ############################################################################################################################################################   
 # twinflex function
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10) {
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 20) {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -298,6 +297,7 @@ ordinallength <- unlist(lapply(levelslist,length))
 #}
 # Define objects for threshold matrix
 nTh       <- ordinallength-1 # No of thresholds
+print("GUCK MAL HIER...")
 print(nTh)
 ntvo      <- length(ordinalwide) # Total No of ordinal vars
 
@@ -355,6 +355,7 @@ varsnew <- unlist(sapply(strsplit(vars, split=sep, fixed=TRUE), function(x) (x[1
 }
 
 frTh <- unlist(lapply(nTh, freeThresholds))
+print("UND GUCK HIER!")
 svTh <- unlist(lapply(nTh, valThresholds))
 lbTh <- unlist(lapply(nTh, lbThresholds))
 labTh <- unlist(lapply(ordinalwide, labelThresholds))
@@ -734,7 +735,7 @@ fitACE    <- mxTryHardOrdinal(modelACE, extraTries = 10, exhaustive = FALSE)
 fitACE    <- mxTryHard(modelACE, extraTries = 10, exhaustive = FALSE)
   }
 fitACE <- mxRun(fitACE)
-} else {
+
 fitACE    <- mxRun(modelACE)  
 }
 # Summarize model
@@ -747,7 +748,7 @@ print(sumACE)
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("schoolbin"), ordinal = "schoolbin", covvars = "negbez", data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
+twinflex(acevars = c("schoolbin"), ordinal = "schoolbin", covvars = c("age"), data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
 
 sep <- "_"
 acevars <- c("kultkapjahre","negbez")
