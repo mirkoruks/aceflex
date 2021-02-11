@@ -4,17 +4,17 @@ library(dplyr)
 library(OpenMx)
 library(xtable)
 
-data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
+data_o <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
                       header = TRUE)
-summary(data_orig)
-#data_orig <- data_orig %>% rename(negbez_t1=negbez_1) %>% rename(negbez_t2=negbez_2)  %>% rename(posbez_t1=posbez_1) %>% rename(posbez_t2=posbez_2)
+summary(data_o)
+#data <- data %>% rename(negbez_t1=negbez_1) %>% rename(negbez_t2=negbez_2)  %>% rename(posbez_t1=posbez_1) %>% rename(posbez_t2=posbez_2)
 
 # create binary
-data_orig <- data_orig %>% 
+data_o <- data_o %>% 
   mutate(schoolbin_1 = ifelse(schoolhigh_1 %in% c(1,2), 1,
                        ifelse(schoolhigh_1 %in% c(3,4), 2, NA))) %>% 
   mutate(schoolbin_2 = ifelse(schoolhigh_2 %in% c(1,2), 1,
-                       ifelse(schoolhigh_2 %in% c(3,4), 2, NA)))
+                       ifelse(schoolhigh_2 %in% c(3,4), 2, NA))) %>% rename(zy = zyg)
 
 ## TO DO
   # CHECK COVARIATE SECTION! DOES NOT WORK WITHOUT AND PROBLEMS DISTINGUISHING WITHIN-VARIANCE?
@@ -86,20 +86,22 @@ existenceerror <- function(result) {
   }
   }
 
-
   # 1a: Check for acevars (only in wide since they have to have within-pair-variance)
 acevars1 <-    paste0(acevars,sep,"1") # Covariates twin 1
 acevars2 <-    paste0(acevars,sep,"2") # Covariates twin 2
 acevarswide <- c(acevars1, acevars2)
+print(acevarswide)
 existence_check_acevars <- unlist(lapply(acevarswide, existence))
+print(existence_check_acevars)
 if (!is.null(existence_check_acevars)) {
 acevars_not_found <- unlist(sapply(strsplit(existence_check_acevars, split=sep, fixed=TRUE), function(x) (x[1])))
 acevars_not_found <- unique(acevars_not_found)
-#existenceerror(existence_check_acevars)
+existenceerror(existence_check_acevars)
 } else {
   acevars_not_found <- NULL
 }
-
+print("HALLO")
+print(acevars_not_found)
   # 1b: Check for covvars (can be in wide and long) -> 1. Check for wide -> 2. Check for Long if something does not appear as wide
 if (!is.null(covvars) & class(covvars)== "character") {
 covvars1 <-    paste0(covvars,sep,"1") # Covariates twin 1
@@ -138,11 +140,31 @@ covvarswide <- NULL
 covvarslong_checked <- NULL
 }
 
+if (!is.null(ordinal)) {
+if (!class(ordinal)== "character") {
+  stop("The ordinal-argument needs a character vector")
+}
+ocheck <- ordinal %in% acevars
+if (FALSE %in% ocheck) {
+  stop("All the ordinal variables need to be added in the acevars argument as well")
+}
+# Check for categorical variables in acevars 
+if (!is.null(ordinal) & class(ordinal)== "character") {
+ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
+ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
+}
+ordinalwide <- c(ordinal1,ordinal2)
+existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
+existenceerror(existence_check_ordvars)
+}
+
 varswide1 <- c(acevars1,covvars1)
 varswide2 <- c(acevars2,covvars2)
 
 
-
+###############################################################################
+# Summary of input variables
+###############################################################################
 cat("\n\n\nACE Variables: \n\n")
 print(acevarswide)
 
@@ -175,6 +197,9 @@ variables <- c(acevarswide,covvarsall)
 cat(paste0("\n\n\nAll in all, there are ",length(variables)," variables: \n\n"))
 print(variables)
 
+###############################################################################
+# Check within-pair-variance
+###############################################################################
 rna <- function(x) replace(x, is.na(x), "")
 checkvariance <- function(v1,v2) {
 identicalcheck <- as.vector(colSums(ifelse(rna(data[,v1, drop = FALSE])==rna(data[,v2, drop = FALSE]), 0, 1)))
@@ -193,25 +218,24 @@ else {
 }
 checkvariance(varswide1,varswide2)
 
-usevariables <- c(variables,"zyg")
+# Check if zygosity variable is correctly specified
+print(zyg)
+existence_check_zyg <- existence(zyg)
+existenceerror(existence_check_zyg)
+
+usevariables <- c(variables,zyg)
 usedata <- subset(data, select = c(usevariables)) # Data set with only variables used for the model
 cat("\n\n\nSummary total Data\n\n")
 print(summary(usedata))
 
+###############################################################################
 # Check if zygosity variable is coded correctly
-if (min(usedata$zyg) != 1 & max(usedata$zyg) != 2) {
+###############################################################################
+
+if (min(usedata[,zyg]) != 1 & max(usedata[,zyg]) != 2) {
           stop("Zygosity variable must be coded as follows: 1 = MZ, 2 = DZ. Please, recode the zygosity variable.")
 }
-if (!is.null(ordinal)) {
-# Check for categorical variables in acevars 
-if (!is.null(ordinal) & class(ordinal)== "character") {
-ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
-ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
-}
-ordinalwide <- c(ordinal1,ordinal2)
-existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
-existenceerror(existence_check_ordvars)
-}
+
 # flag ordinal variables in acevars
 checkcorrespondence <- function(check,comparison) {
     checkresult <- NULL
@@ -219,7 +243,9 @@ checkcorrespondence <- function(check,comparison) {
     checkresult <- TRUE %in% checkresult
 }
 
+###############################################################################
 # Starting Values
+###############################################################################
   # Means Vector
     # acevars
 svmeanacevarswide1 <- colMeans(usedata[,acevars1, drop = FALSE], na.rm=TRUE)
@@ -384,6 +410,8 @@ nv <- length(acevars) # Vars per twin
 ntv <- nv*2 # Vars per twin pair
 m <- (nv*2) # Decomposed manifest variables
 c <- length(covvarsall) # Control variables 
+print("TESTEST")
+print(c)
 l <- 3*nv*2
 t <- m+l+c
 
@@ -460,32 +488,24 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
 pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
                             name = "pCov")  
 }
+print(pathCov)
 mat <- matrix(0.3,nrow = nv,ncol = nv)
-mat
 freepathAC <- lower.tri(mat, diag = TRUE)
-freepathAC
 mat[upper.tri(mat, diag = FALSE)] <- 0
 valuespathAC <- mat
-valuespathAC
 mat[lower.tri(mat, diag = FALSE)] <- 0
 valuespathE <- mat
-valuespathE
 freepathE <- valuespathE == .3
-freepathE
-
 
 nvstring <- as.character(1:nv)
 pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
-pathAlabel
 
 pathClabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("c",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathClabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathClabel
 
 pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathElabel
 
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
@@ -502,6 +522,7 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   values = valuespathE,
                   labels = pathElabel,
                   name = "e")
+print(c(pathA,pathC,pathE))
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
                                               cbind(pZ,b)),pCov), name = "pM")
@@ -536,11 +557,10 @@ for (r in 1:nrow(labelmat))  {
   labelmat[upper.tri(labelmat, diag = FALSE)] <- NA
   labelmat <- as.vector(labelmat)
   labelmat <- labelmat[!is.na(labelmat)]
-  labelmat
 return(labelmat)
 }
-svS <- unname(as.matrix(var(data_orig[,covvarsall], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
-
+svS <- unname(as.matrix(var(data[,covvarsall], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
+print(svS)
 if (!isSymmetric(svS)) {
 svS[upper.tri(svS)] <- t(svS)[upper.tri(svS)]
 }
@@ -552,14 +572,28 @@ covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  labels = labelcovmat(covvarsall),
                  free = TRUE,
                  name = "cCov")
+covManCov <- mxMatrix(type = "Zero", nrow = m, ncol = c, name = "cManCov")
+covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
+covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
+matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
+                                        cbind(t(cManCov),cCov),
+                                        t(cManCovACE)), name = "matSM")
 } else {
-covCovariates <- mxMatrix(type = "Symm", nrow = 0, ncol = 0, byrow = FALSE,
-                 name = "cCov")
+ covCovariates <- NULL
+ covManCov <- NULL
+covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
+covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
+matSMan <- mxAlgebra(expression = rbind(cMan, 
+                                        t(cManCovACE)), name = "matSM")
 }
 
-covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
-covManCov <- mxMatrix(type = "Zero", nrow = m, ncol = c, name = "cManCov")
-covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
+#covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
+
+#covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
+
+#matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
+#                                        cbind(t(cManCov),cCov),
+#                                        t(cManCovACE)), name = "matSM")
 
 covV <- mxMatrix(type = "Iden", nrow = l/2, ncol = l/2, name = "V")
 covCMZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
@@ -568,9 +602,6 @@ covCMZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
 covCDZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
                    values = c(rep(.5,nv),rep(1,nv),rep(0,nv)),
                    name = "CDZ")
-matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
-                                        cbind(t(cManCov),cCov),
-                                        t(cManCovACE)), name = "matSM")
 
 matSMZ <- mxAlgebra(expression = cbind(matSM,rbind(cManCovACE,
                                                    cbind(V,CMZ),
@@ -588,8 +619,6 @@ matF <- mxAlgebra(expression = cbind(FI,FZ), name = "Filter")
 matI <- mxMatrix(type = "Iden", nrow = t, ncol = t, name = "I")
 covMZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SMZ%*%t(solve(I-A))%*%t(Filter), name = "expCovMZ")
 covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Filter), name = "expCovDZ")
-
-## VARIANCE CONSTRAINT FOR BINARY VARIABLES ! 
 
 # Mean Matrix
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(variables, split=sep, fixed=TRUE), function(x) (x[1])))))
@@ -702,9 +731,10 @@ pars <- c(pars,c(thinG,inc,threG))
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="DZ")
+
 if (!is.null(ordinal)) {
 if (2 %in% ordinallength) {
-  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
+modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,name="DZ")
 }
 }
@@ -748,7 +778,7 @@ print(sumACE)
 ############################################################################################################################################################
 ############################################################################################################################################################
 
-twinflex(acevars = c("schoolbin"), ordinal = "schoolbin", covvars = c("age"), data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg")
+twinflex(acevars = c("posbez","schoolbin"),ordinal="schoolbin", covvars = c("age"), data = data_o,sep = "_",tryHard = TRUE, zyg = "zy")
 
 sep <- "_"
 acevars <- c("kultkapjahre","negbez")
@@ -762,11 +792,11 @@ covvars <- c("age","posbez")
 
 existence <- function(variable) {
   result <- NULL
-if(variable %in% colnames(data_orig))
+if(variable %in% colnames(data))
 {
   result <- NULL
 }
-else if (!(variable %in% colnames(data_orig))) {
+else if (!(variable %in% colnames(data))) {
   result <- variable
 }
 }
@@ -842,10 +872,10 @@ covvarswide
 # 2. check if the wide formatted variables have within-pair-variance
   # acevars
     # generate some fake variables
-data_orig$fakewide_1 <- runif(dim(data_orig)[1]) 
-ind <- which(data_orig$fakewide_1 %in% sample(data_orig$fakewide_1, 15))
-data_orig$fakewide_1[ind]<-NA
-data_orig$fakewide_2 <- data_orig$fakewide_1
+data$fakewide_1 <- runif(dim(data)[1]) 
+ind <- which(data$fakewide_1 %in% sample(data$fakewide_1, 15))
+data$fakewide_1[ind]<-NA
+data$fakewide_2 <- data$fakewide_1
 
 acevars1
 acevars2
@@ -856,7 +886,7 @@ acevars2_fake
 
 rna <- function(x) replace(x, is.na(x), "")
 checkvariance <- function(v1,v2) {
-identicalcheck <- as.vector(colSums(ifelse(rna(data_orig[,v1, drop = FALSE])==rna(data_orig[,v2, drop = FALSE]), 0, 1)))
+identicalcheck <- as.vector(colSums(ifelse(rna(data[,v1, drop = FALSE])==rna(data[,v2, drop = FALSE]), 0, 1)))
 if (0 %in% identicalcheck == TRUE) {
 ind <- identicalcheck==0
 result1 <- v1[ind]
@@ -872,10 +902,10 @@ else {
 }
 
 # Die richtigen Vars
-as.vector(colSums(ifelse(rna(data_orig[,acevars1, drop = FALSE])==rna(data_orig[,acevars2, drop = FALSE]), 0, 1)))
+as.vector(colSums(ifelse(rna(data[,acevars1, drop = FALSE])==rna(data[,acevars2, drop = FALSE]), 0, 1)))
 checkvariance(acevars1,acevars2)
 # Die fake Vars
-as.vector(colSums(ifelse(rna(data_orig[,acevars1, drop = FALSE])==rna(data_orig[,acevars2, drop = FALSE]), 0, 1)))
+as.vector(colSums(ifelse(rna(data[,acevars1, drop = FALSE])==rna(data[,acevars2, drop = FALSE]), 0, 1)))
 checkvariance(acevars1_fake,acevars2_fake)
 
 variables <- c(acevarswide,covvars)
@@ -883,23 +913,23 @@ variables
 # Starting Values
   # Means Vector
     # acevars
-svmeanacevarswide1 <- colMeans(data_orig[,acevars1, drop = FALSE], na.rm=TRUE)
-svmeanacevarswide2 <- colMeans(data_orig[,acevars2, drop = FALSE], na.rm=TRUE)
+svmeanacevarswide1 <- colMeans(data[,acevars1, drop = FALSE], na.rm=TRUE)
+svmeanacevarswide2 <- colMeans(data[,acevars2, drop = FALSE], na.rm=TRUE)
 svmeanacevars <- rowMeans(cbind(svmeanacevarswide1, svmeanacevarswide2), na.rm=TRUE)
 cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
 print(svmeanacevars)
     # covvars
       # wide
 if (!is.null(covvarswide)) {
-svmeancovvarswide1 <- colMeans(data_orig[,covvars1, drop = FALSE], na.rm=TRUE)
-svmeancovvarswide2 <- colMeans(data_orig[,covvars2, drop = FALSE], na.rm=TRUE)
+svmeancovvarswide1 <- colMeans(data[,covvars1, drop = FALSE], na.rm=TRUE)
+svmeancovvarswide2 <- colMeans(data[,covvars2, drop = FALSE], na.rm=TRUE)
 svmeancovvarswide <- rowMeans(cbind(svmeancovvarswide1, svmeancovvarswide2), na.rm=TRUE)
 } else {
 svmeancovvarswide <- NULL  
 }
       # long
 if (!is.null(covvarslong_checked)) {
-svmeancovvarslong <-  colMeans(data_orig[,covvarslong_checked, drop = FALSE], na.rm=TRUE)
+svmeancovvarslong <-  colMeans(data[,covvarslong_checked, drop = FALSE], na.rm=TRUE)
 } else {
 svmeancovvarslong <- NULL  
 }
@@ -1125,7 +1155,7 @@ for (r in 1:nrow(labelmat))  {
   labelmat
 return(labelmat)
 }
-svS <- unname(as.matrix(cov(data_orig[,covvars], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
+svS <- unname(as.matrix(cov(data[,covvars], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
 if (!isSymmetric(svS)) {
 svS[upper.tri(svS)] <- t(svS)[upper.tri(svS)]
 }
@@ -1137,7 +1167,7 @@ covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  free = TRUE,
                  name = "cCov")
 print(covCovariates)
-cov(data_orig[,"age"])
+cov(data[,"age"])
 
 ##############################################################################
 ##############################################################################

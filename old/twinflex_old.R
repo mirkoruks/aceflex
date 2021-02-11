@@ -1,4 +1,5 @@
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol") {
+# twinflex function
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, optimizer = "SLSQP", tryHard = TRUE, tries = 10, type = "aceb") {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -27,15 +28,6 @@ if (!is.null(covvars) & class(covvars)!= "character") {
   stop("Please, use a string vector to specify the covariates")
 }
 
-if (!is.null(ordinal)) {
-if (!class(ordinal)== "character") {
-  stop("The ordinal-argument needs a character vector")
-}
-ocheck <- ordinal %in% acevars
-if (FALSE %in% ocheck) {
-  stop("All the ordinal variables need to be added in the acevars argument as well")
-}
-}
 # Output-List -> Print results
 output <- list()   
 
@@ -65,6 +57,8 @@ existenceerror <- function(result) {
   if (!is.null(result)) {
   stop(c("I could not find a variable(s) in the data frame corresponding to the following variable strings you gave me: ",paste(result, sep = " ", collapse = ", ")))
   
+  }
+  else {
   }
   }
 
@@ -166,43 +160,41 @@ result1 <- v1[ind]
 result2 <- v2[ind]
 result <- c(result1,result2)
 if (!is.null(result)) {
-  stop(c("The following acevars have no within-variance: ",paste(result, sep = " ", collapse = ", ")))
+  stop(c("The following acevars are identical and have no within-variance: ",paste(result, sep = " ", collapse = ", ")))
 }
 }
 else {
-  cat("\n\n\nAll the wide-formatted variables have within-pair variance")
+  print("All the acevars have within-pair variance")
 }
 }
-checkvariance(varswide1,varswide2)
+print(varswide1)
+print(varswide2)
 
-existence_check_zyg <- existence(zyg)
+# Die richtigen Vars
+as.vector(colSums(ifelse(rna(data[,acevars1, drop = FALSE])==rna(data[,acevars2, drop = FALSE]), 0, 1)))
+checkvariance(acevars1,acevars2)
+# Die fake Vars
+as.vector(colSums(ifelse(rna(data[,acevars1, drop = FALSE])==rna(data[,acevars2, drop = FALSE]), 0, 1)))
+checkvariance(acevars1_fake,acevars2_fake)
+
+variables <- c(acevarswide,covvars)
+variables
+# Check if zygosity variable is correctly specified
+existence_check_zyg <- unlist(lapply("zyg", existence))
 existenceerror(existence_check_zyg)
 
-usevariables <- c(variables,zyg)
+
+usevariables <- c(variables,"zyg")
 usedata <- subset(data, select = c(usevariables)) # Data set with only variables used for the model
 cat("\n\n\nSummary total Data\n\n")
 print(summary(usedata))
 
 # Check if zygosity variable is coded correctly
-if (min(usedata[,zyg]) != 1 & max(usedata[,zyg]) != 2) {
+if (min(data$zyg) != 1 & max(data$zyg) != 2) {
           stop("Zygosity variable must be coded as follows: 1 = MZ, 2 = DZ. Please, recode the zygosity variable.")
 }
-if (!is.null(ordinal)) {
-# Check for categorical variables in acevars 
-if (!is.null(ordinal) & class(ordinal)== "character") {
-ordinal1 <-    paste0(ordinal,sep,"1") # Covariates twin 1
-ordinal2 <-    paste0(ordinal,sep,"2") # Covariates twin 2
-}
-ordinalwide <- c(ordinal1,ordinal2)
-existence_check_ordvars <- unlist(lapply(ordinalwide, existence))
-existenceerror(existence_check_ordvars)
-}
-# flag ordinal variables in acevars
-checkcorrespondence <- function(check,comparison) {
-    checkresult <- NULL
-    checkresult <- check %in% comparison
-    checkresult <- TRUE %in% checkresult
-}
+
+
 
 # Starting Values
   # Means Vector
@@ -210,12 +202,8 @@ checkcorrespondence <- function(check,comparison) {
 svmeanacevarswide1 <- colMeans(usedata[,acevars1, drop = FALSE], na.rm=TRUE)
 svmeanacevarswide2 <- colMeans(usedata[,acevars2, drop = FALSE], na.rm=TRUE)
 svmeanacevars <- rowMeans(cbind(svmeanacevarswide1, svmeanacevarswide2), na.rm=TRUE)
-if (!is.null(ordinal)) {
-  flagordinal <- unlist(lapply(acevars1,checkcorrespondence, check = ordinalwide))
-  svmeanacevars[flagordinal] <- 0
-}
-cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
-print(svmeanacevars)
+#cat("\n\n\nStarting Values of the acevars for the mean vector\n\n")
+#print(svmeanacevars)
     # covvars
       # wide
 if (!is.null(covvarswide)) {
@@ -235,133 +223,24 @@ svmeancovvarslong <- NULL
 svmeancovvars <- c(svmeancovvarslong,svmeancovvarswide,svmeancovvarswide)
 svmean <- c(svmeanacevars,svmeanacevars,svmeancovvars)
 
-cat("\n\n\nStarting Values of the covvars for the mean vector\n\n")
-if (!is.null(svmeancovvars)) {
-print(svmeancovvars)
-} else {
-  cat("There are no covariates")
-}
-
-cat("\n\n\nStarting Values for the mean vector\n\n")
-print(svmean)
-
-if (!is.null(ordinal)) {
-# check number of levels of ordinal variable (crucial question is: ordinal or binary?) -> necessary for later conditional statements 
-nlevels <- function(variable) { 
-nolevels <- sort(unique(usedata[,variable]))
-}
-
-llevels <- function(variable) { 
-length <- length(sort(unique(usedata[,variable])))
-result <- NULL
-if(length>1)
-{
-  result <- NULL
-}
-else if (length == 1) {
-  result <- variable
-}
-
-}
-
-levelserror <- function(result) {
-  if (!is.null(result)) {
-  stop(c("Check your ordinal variables.. The following variables have only one category: ",paste(result, sep = " ", collapse = ", ")))
-  
-  }
-  }
-levelslist <- lapply(ordinalwide, nlevels)
-levelserror(unlist(lapply(ordinalwide, llevels)))
-
-usedata[,ordinalwide] <- mxFactor(usedata[,ordinalwide], levels = levelslist)
-cat("\n\n\nSummary of used variables\n\n")
-print(summary(usedata))
-ordinallength <- unlist(lapply(levelslist,length))
-#if (2 %in% ordinallength) {
-#    stop("Sorry, at the moment the function does not support binary variables")
+#cat("\n\n\nStarting Values of the covvars for the mean vector\n\n")
+#if (!is.null(svmeancovvars)) {
+#print(svmeancovvars)
+#} else {
+#  cat("There are no covariates")
 #}
-# Define objects for threshold matrix
-nTh       <- ordinallength-1 # No of thresholds
-ntvo      <- length(ordinalwide) # Total No of ordinal vars
 
-freeThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
-values <- NULL
-    if(nt == 1) {
-    values <- c(TRUE,rep(FALSE,(max(nTh)-1))) 
-    }
-    else if (nt > 1 & nt < max(nTh)) {
-       values <- c(rep(FALSE,2),rep(TRUE,(nt-2)),rep(FALSE,(max(nTh)-nt)))        
-    }
-    else if (nt > 1 & nt == max(nTh)) {
-       values <- c(rep(FALSE,2),rep(TRUE,(nt-2))) 
-    }
-}
-valThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
-values <- NULL
-    if(nt == 1) {
-    values <- c(.5,rep(0,(max(nTh)-1))) # unused thresholds set to zero (check: post #20 by T. Bates in: https://openmx.ssri.psu.edu/node/4538)
-    }
-    else if (nt > 1 & nt < max(nTh)) {
-      values <- c(0,rep(1,(nt-1)),rep(0,(max(nTh)-nt)))           
-    }
-    else if (nt > 1 & nt == max(nTh)) {
-       values <- c(0,rep(1,(nt-1))) 
-    }
-}
+#cat("\n\n\nStarting Values for the mean vector\n\n")
+#print(svmean)
 
-lbThresholds <- function(nt) { # assumes mxMatrix(byrow = FALSE)
-lb <- NULL
-    if(nt == 1) {
-    lb <- rep(NA,max(nTh))
-    }
-    else if (nt > 1 & nt < max(nTh)) {
-      lb <- c(-3,rep(.0001,(nt-1)),rep(NA,(max(nTh)-nt)))         
-    }
-    else if (nt > 1 & nt == max(nTh)) {
-       lb <- c(-3,rep(.0001,(nt-1)))  
-    }
-}
-
-labelThresholds <- function(vars) { # assumes mxMatrix(byrow = FALSE)
-labels <- NULL
-noTh <- (length(levels(usedata[,vars])))-1
-varsnew <- unlist(sapply(strsplit(vars, split=sep, fixed=TRUE), function(x) (x[1])))
-    if (noTh == 1) { # binary
-        labels <- c(paste0("th",varsnew,1),rep(NA,(max(nTh)-1)))
-    }
-    else if (noTh > 1 & noTh < max(nTh)) { # ordinal
-        labels <- paste0("th",varsnew,(1:noTh),rep(NA,(max(nTh)-noTh)))
-    }
-    else if (noTh > 1 & noTh == max(nTh)) { # ordinal
-        labels <- paste0("th",varsnew,(1:noTh))
-    }
-}
-
-frTh <- unlist(lapply(nTh, freeThresholds))
-svTh <- unlist(lapply(nTh, valThresholds))
-lbTh <- unlist(lapply(nTh, lbThresholds))
-labTh <- unlist(lapply(ordinalwide, labelThresholds))
-
-# Thresholds definieren
-thinG     <- mxMatrix(type="Full", nrow=max(nTh), ncol=ntvo, free=frTh, byrow = FALSE, values=svTh, lbound=lbTh, labels=labTh, name="thinG") # matrix of threshold increments
-inc       <- mxMatrix(type="Lower", nrow=max(nTh), ncol=max(nTh), free=FALSE, values=1, name="inc") # matrix of lower 1
-# Example how the premultiplication with a matrix of lower 1 ensures the ordering of the thresholds
-#mat1 <- matrix(svTh, nrow=max(nTh), ncol=ntvo)
-#lower <- matrix(1,nrow=max(nTh), ncol=max(nTh))
-#lower[upper.tri(lower)] <- 0
-threG     <- mxAlgebra(expression= inc %*% thinG, name="threG") # Multiplikation stellt sicher, dass Th3>Th2>Th1, wobei Th2>Th1 schon durch die Fixierung auf 0, bzw. 1 gesichert ist!
-#umxThresholdMatrix(df = data, selDVs = ordinalwide, sep = "_", method = "Mehta")
-}
 # define the MZ and DZ data sets
-mzData <- usedata %>% filter(!!as.symbol(zyg)==1) %>% select(variables)
-dzData <- usedata %>% filter(!!as.symbol(zyg)==2) %>% select(variables)
-
-#mzData    <- subset(usedata, zyg==1, variables)
-#dzData    <- subset(usedata, zyg==2, variables)
+mzData    <- subset(usedata, zyg==1, variables)
+dzData    <- subset(usedata, zyg==2, variables)
 cat("\n\n\nSummary MZ Data\n\n")
 print(summary(mzData))
 cat("\n\n\nSummary DZ Data\n\n")
 print(summary(dzData))
+
 # Shortcuts for the matrix dimensions
 # No. of Variables
 nv <- length(acevars) # Vars per twin
@@ -375,26 +254,19 @@ t <- m+l+c
 
 # Matrix A 
 
-# Helper objects for object of manifest paths between acevars f 
+# Helper objects for object of manifest paths between acevars 
+
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathB <- lower.tri(mat)
-freepathB
 
 mat[upper.tri(mat, diag = TRUE)] <- 0
 valuespathB <- mat
-valuespathB
 
 nvstring <- as.character(1:nv)
 pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
-pathBlabel
 
-#pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-#                  free = freepathB,
-#                  values = valuespathB,
-#                  labels = pathBlabel,
-#                  name = "b")
 if (type == "aceb") {
 pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathB,
@@ -408,8 +280,11 @@ pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   labels = pathBlabel,
                   name = "b")  
 }
+
 pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
+# path coefficients of covariates
+if (!is.null(covvars)) {
 pathCov_label_variance <- function(string) {
 stringend <- substring(string, nchar(string)) == "1"
   if  (stringend == TRUE) {
@@ -447,15 +322,14 @@ pathCovlabel <- cbind(pathCovlabelconstant,pathCovlabelvariance)
 pathCovvalue <- cbind(pathCovvalueconstant,pathCovvaluevariance)
 pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
 
-if (!is.null(covvars)) {
 pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             free = pathCovfree,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
+
 } else {
-pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
-                            name = "pCov")  
+  pathCov <- NULL
 }
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
@@ -466,65 +340,50 @@ valuespathAC <- mat
 valuespathAC
 mat[lower.tri(mat, diag = FALSE)] <- 0
 valuespathE <- mat
-valuespathE
-freepathE <- valuespathE == .3
-freepathE
 
+freepathE <- valuespathE == .3
 
 nvstring <- as.character(1:nv)
 pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
-pathAlabel
 
 pathClabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("c",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathClabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathClabel
 
 pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
-pathElabel
-pathACElb <- diag(0.0001,nv,nv)
-pathACElb[pathACElb == 0] <- NA
+
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
-                  lbound = pathACElb,
                   labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
-                  lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
-#pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-#                  free = freepathE,
-#                  values = valuespathE,
-#                  labels = pathElabel,
-#                  name = "e")
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
                   values = valuespathE,
-                  lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")
 } else if (type == "chol") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
-                  lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")  
 }
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
+
 if (!is.null(covvars)) {
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
-                                              cbind(pZ,b)),pCov), name = "pM")
-}
-if (is.null(covvars)) {
-pathMan <- mxAlgebra(expression = rbind(cbind(b,pZ),
-                                              cbind(pZ,b)), name = "pM")    
+                                            cbind(pZ,b)),pCov), name = "pM")
+} else {
+  pathMan <- mxAlgebra(expression = rbind(cbind(b,pZ),
+                                              cbind(pZ,b)), name = "pM")
 }
 pathACE <- mxAlgebra(expression = rbind(cbind(a,c,e,pZ,pZ,pZ),
                                         cbind(pZ,pZ,pZ,a,c,e)), name = "pACE")
@@ -533,13 +392,13 @@ matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
                   name = "A")
 
 # MATRIX S
+if (!is.null(covvars)) {
 lowerboundcovmat <- function(dimnumber) {
   mat1 <- matrix(NA, dimnumber, dimnumber)
   diag(mat1) <- 0.00001
   mat1[upper.tri(mat1, diag = FALSE)] <- NaN
   mat1 <- as.vector(mat1)
   mat1 <- mat1[!is.nan(mat1)]
-  mat1
   return(mat1)
 }
 labelcovmat <- function(dimlabel) {
@@ -558,7 +417,7 @@ for (r in 1:nrow(labelmat))  {
   labelmat <- as.vector(labelmat)
   labelmat <- labelmat[!is.na(labelmat)]
   labelmat
-return(labelmat)
+  return(labelmat)
 }
 svS <- unname(as.matrix(var(data[,covvarsall], use = "na.or.complete"))) # S matrix starting values for non-decomposed covariates
 
@@ -566,27 +425,21 @@ if (!isSymmetric(svS)) {
 svS[upper.tri(svS)] <- t(svS)[upper.tri(svS)]
 }
 
-if (!is.null(covvars)) {
+
 covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  values = svS,
                  lbound = lowerboundcovmat(c), 
                  labels = labelcovmat(covvarsall),
                  free = TRUE,
                  name = "cCov")
-covManCov <- mxMatrix(type = "Zero", nrow = m, ncol = c, name = "cManCov")
-covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
-covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
-matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
-                                        cbind(t(cManCov),cCov),
-                                        t(cManCovACE)), name = "matSM")
-} 
-if (is.null(covvars)) {
-covCovariates <- NULL
-covManCov <- NULL
-covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
-covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
-matSMan <- mxAlgebra(expression = rbind(cMan,t(cManCovACE)), name = "matSM")
+} else {
+  covCovariates <- NULL
 }
+
+
+covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
+covManCov <- mxMatrix(type = "Zero", nrow = m, ncol = c, name = "cManCov")
+covManCovACE <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "cManCovACE")
 
 covV <- mxMatrix(type = "Iden", nrow = l/2, ncol = l/2, name = "V")
 covCMZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
@@ -595,6 +448,16 @@ covCMZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
 covCDZ <- mxMatrix(type = "Diag", nrow = l/2, ncol = l/2,
                    values = c(rep(.5,nv),rep(1,nv),rep(0,nv)),
                    name = "CDZ")
+
+if (!is.null(covvars)) {
+matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
+                                        cbind(t(cManCov),cCov),
+                                        t(cManCovACE)), name = "matSM")
+} else {
+matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov), 
+                                        cbind(t(cManCov)),
+                                        t(cManCovACE)), name = "matSM")
+}
 
 matSMZ <- mxAlgebra(expression = cbind(matSM,rbind(cManCovACE,
                                                    cbind(V,CMZ),
@@ -622,74 +485,18 @@ matM <- mxMatrix(type = "Full", nrow = t, ncol = 1,
                  labels = c(meanmanifestlabel,meanacelabel),
                  values = c(svmean,rep(0,l)), 
                  name = "M")
-if (!is.null(ordinal)) {
-if (2 %in% ordinallength) {
-binarytrue <- nTh == 1
-binaryvar <- ordinalwide[binarytrue]
-binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
-binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
-binaryflag <- c(binaryace,binaryrest)
-# fixed means
-binaryflag # FALSE = Non binary; TRUE = binary -> for the mean estimation we can reverse it 
- # if there are any binary variables
-svmean_manifests <- binaryflag == FALSE
-svmean_manifests # insert this vector into the "free"-argument if there are binary variables in the model
-matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
-                 free = c(svmean_manifests,rep(FALSE,l)), 
-                 labels = c(meanmanifestlabel,meanacelabel),
-                 values = c(svmean,rep(0,l)), 
-                 name = "M")
-}
-}
+#print(matM)
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
 
 # Define data object
 dataMZ    <- mxData(observed=mzData, type="raw")
 dataDZ    <- mxData(observed=dzData, type="raw")
 
-# Variance constraint for binary variables
-if (!is.null(ordinal)) {
-if (2 %in% ordinallength) {
-# fixed variances
-# 2 are binary (1st and 3rd)  
-  # No of rows = no of binary vars
-nrowfilterbinary <- sum(binaryflag)
-  # No of cols = vars in total
-ncolsfilterbinary <- length(variables)
-  # 1 if var = binary and 0 if not
-# function: while row
-bfilter <- function(x,vec) {
-  result <- list()
-  vec[-x] <- 0
-  result <- vec
-  }
-
-valfilterbinary <- binaryflag
-valfilterbinary[valfilterbinary== TRUE] <- 1
-flag <- which(valfilterbinary == 1)
-filtermatvalues <- matrix(unlist(lapply(flag, bfilter, vec = valfilterbinary)),nrow = nrowfilterbinary, ncol = length(valfilterbinary), byrow = TRUE)
-
-filtermatbin <- mxMatrix(type = "Full", values = filtermatvalues, name = "fmatbin")
-binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZ %*% t(fmatbin), name = "binCov")
-
-one <- mxMatrix(type = "Unit", nrow = nrowfilterbinary, ncol = 1, name = "Unit")
-var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1")
-binary <- c(filtermatbin,binarycov,one,var1)
-}
-}
 # Define expectation objects 
-if (!is.null(ordinal)) {
-expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
-                                 dimnames=variables)
-expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
-                                 dimnames=variables)
-}
-else {
 expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean",
                                  dimnames=variables)
 expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean", 
-                                 dimnames=variables)  
-}
+                                 dimnames=variables)
 # Fit function (FIML)
 fitfun     <- mxFitFunctionML()
 
@@ -698,61 +505,41 @@ pars      <- list(pathB, pathA, pathC, pathE,pathCov, pathZ, matA, pathMan, path
                   covCovariates, covMan, covManCov, covManCovACE, covV,matSMan,
                   filterI, filterZ, matF, matI,
                   matM, mean, pathBottom)
-if (!is.null(ordinal)) {
-pars <- c(pars,c(thinG,inc,threG))
-}
-
-#if (2 %in% ordinallength) {
-#pars <- c(pars,binary)
-#}
 
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="DZ")
-if (!is.null(ordinal)) {
-if (2 %in% ordinallength) {
-  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
-modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,name="DZ")
-}
-}
 multi     <- mxFitFunctionMultigroup(c("MZ","DZ"))
 
 # overall model object
 modelACE  <- mxModel("ACE", pars, modelMZ, modelDZ, multi)
 # run model
+if (optimizer == "SLSQP") {
+  mxOption(NULL , 'Default optimizer' , 'SLSQP')
+} else if (optimizer == "NPSOL") {
+  mxOption(NULL , 'Default optimizer' , 'NPSOL')
+} else if (optimizer == "CSOLNP") {
+mxOption(NULL , 'Default optimizer' , 'CSOLNP')
+}
 
-if (is.null(optimizer) & is.null(ordinal)) {
-mxOption(NULL , 'Default optimizer' , 'SLSQP')
-} 
-else if (is.null(optimizer) & !is.null(ordinal)) {
-mxOption(NULL , 'Default optimizer' , 'CSOLNP')   
-}
-else if (optimizer == "SLSQP") {
-mxOption(NULL , 'Default optimizer' , 'SLSQP')    
-}
-else if (optimizer == "CSOLNP") {
-mxOption(NULL , 'Default optimizer' , 'CSOLNP')    
-}
-else if (optimizer == "NPSOL") {
-mxOption(NULL , 'Default optimizer' , 'NPSOL')    
-}
+
 set.seed(1)
 
 # Fit full model
 #modelACE <- omxAssignFirstParameters(modelACE) # randomly select one starting value if one free parameter has been assigned with more than one starting value
 
-if (tryHard == FALSE){
-    fitACE    <- mxRun(modelACE)
-}
-
 if (tryHard == TRUE){
-if (!is.null(ordinal)) {
-fitACE    <- mxTryHardOrdinal(modelACE, extraTries = 10, exhaustive = FALSE)
+fitACE    <- mxTryHard(modelACE, extraTries = tries, exhaustive = TRUE)
+fitACE <- mxRun(fitACE)
+} else {
+fitACE    <- mxRun(modelACE)  
 }
-if (is.null(ordinal)) {
-fitACE    <- mxTryHard(modelACE, extraTries = 10, exhaustive = FALSE)
+# Summarize model
+sumACE    <- summary(fitACE) 
+return(sumACE)
 }
-#fitACE <- mxRun(fitACE)
-}
-return(fitACE)
-}
+############################################################################################################################################################
+############################################################################################################################################################
+#################################################### END OF FUNCTION #######################################################################################
+############################################################################################################################################################
+############################################################################################################################################################

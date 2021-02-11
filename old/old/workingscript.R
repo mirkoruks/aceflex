@@ -1,4 +1,31 @@
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol") {
+rm(list = ls())
+
+library(dplyr)
+library(OpenMx)
+library(xtable)
+
+data_orig <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
+                      header = TRUE)
+summary(data_orig)
+#data_orig <- data_orig %>% rename(negbez_t1=negbez_1) %>% rename(negbez_t2=negbez_2)  %>% rename(posbez_t1=posbez_1) %>% rename(posbez_t2=posbez_2)
+
+# create binary
+data_orig <- data_orig %>% 
+  mutate(schoolbin_1 = ifelse(schoolhigh_1 %in% c(1,2), 1,
+                       ifelse(schoolhigh_1 %in% c(3,4), 2, NA))) %>% 
+  mutate(schoolbin_2 = ifelse(schoolhigh_2 %in% c(1,2), 1,
+                       ifelse(schoolhigh_2 %in% c(3,4), 2, NA)))
+
+## TO DO
+  # CHECK COVARIATE SECTION! DOES NOT WORK WITHOUT AND PROBLEMS DISTINGUISHING WITHIN-VARIANCE?
+
+############################################################################################################################################################
+############################################################################################################################################################
+#################################################### BEGIN OF FUNCTION #####################################################################################
+############################################################################################################################################################
+############################################################################################################################################################   
+# twinflex function
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = NULL, tryHard = FALSE) {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -390,24 +417,11 @@ pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste
 pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
 pathBlabel
 
-#pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-#                  free = freepathB,
-#                  values = valuespathB,
-#                  labels = pathBlabel,
-#                  name = "b")
-if (type == "aceb") {
 pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathB,
                   values = valuespathB,
                   labels = pathBlabel,
                   name = "b")
-} else if (type == "chol") {
-pathB <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = FALSE,
-                  values = 0,
-                  labels = pathBlabel,
-                  name = "b")  
-}
 pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 
 pathCov_label_variance <- function(string) {
@@ -483,40 +497,22 @@ pathClabel
 pathElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("e",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathElabel[upper.tri(pathClabel, diag = FALSE)] <- NA
 pathElabel
-pathACElb <- diag(0.0001,nv,nv)
-pathACElb[pathACElb == 0] <- NA
+
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
-                  lbound = pathACElb,
                   labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
-                  lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
-#pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-#                  free = freepathE,
-#                  values = valuespathE,
-#                  labels = pathElabel,
-#                  name = "e")
-if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
                   values = valuespathE,
-                  lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")
-} else if (type == "chol") {
-pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
-                  values = valuespathAC,
-                  lbound = pathACElb,
-                  labels = pathElabel,
-                  name = "e")  
-}
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
 if (!is.null(covvars)) {
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
@@ -756,3 +752,33 @@ fitACE    <- mxTryHard(modelACE, extraTries = 10, exhaustive = FALSE)
 }
 return(fitACE)
 }
+############################################################################################################################################################
+############################################################################################################################################################
+#################################################### END OF FUNCTION #######################################################################################
+############################################################################################################################################################
+############################################################################################################################################################
+
+
+fit <- twinflex(acevars = c("iseiempmean"), data = data_orig,sep = "_",tryHard = TRUE, zyg = "zyg", optimizer = "SLSQP")
+summary(fit)
+
+mz    <- subset(data_orig, zyg==1,c("iseiempmean_1","iseiempmean_2"))
+dz    <- subset(data_orig, zyg==2,c("iseiempmean_1","iseiempmean_2"))
+
+ace_uni_c_umx <- umxACE(selDVs = "iseiempmean",sep = "_",mzData = mz, dzData = dz)
+summary(ace_uni_c_umx)
+
+data("twinData")
+twinData <- twinData %>% mutate(zyg_r = ifelse(zygosity %in% c("MZFF","MZMM"), 1, # 1 = MZ!
+                                    ifelse(zygosity %in% c("DZFF","DZMM","DZOS"), 2, NA))) #%>% # 2 = DZ!
+                      #  mutate(wt1 = wt1/10) %>% 
+                      #  mutate(wt2 = wt2/10) 
+    
+# umx-specific data preparation
+mz    <- subset(twinData, zyg_r==1,c("ht1","ht2"))
+dz    <- subset(twinData, zyg_r==2,c("ht1","ht2"))
+
+fit <- twinflex(acevars = c("wt"), data = twinData,sep = "",tryHard = TRUE, zyg = "zyg_r", optimizer = "SLSQP")
+
+
+
