@@ -11,7 +11,7 @@ Regarding the scale of the decomposed variables, there are no constraints! You c
 
 Here is the complete function with its argument, including their default values (if defined):
 <pre><code>
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = "SLSQP", tryHard = FALSE, type = "chol") {
+twinflex(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = "SLSQP", tryHard = FALSE, type = "chol")
 </code></pre>
 
 Some information about the arguments:
