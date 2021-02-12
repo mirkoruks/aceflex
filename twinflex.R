@@ -1,4 +1,4 @@
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol") {
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol") {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -233,7 +233,13 @@ svmeancovvarslong <- NULL
 }
       # all
 svmeancovvars <- c(svmeancovvarslong,svmeancovvarswide,svmeancovvarswide)
+if (covariance == TRUE) {
 svmean <- c(svmeanacevars,svmeanacevars,svmeancovvars)
+}
+
+if (covariance == FALSE & !is.null(covvars)) {
+svmean <- c(svmeanacevars,svmeanacevars)  
+}
 
 cat("\n\n\nStarting Values of the covvars for the mean vector\n\n")
 if (!is.null(svmeancovvars)) {
@@ -447,16 +453,16 @@ pathCovlabel <- cbind(pathCovlabelconstant,pathCovlabelvariance)
 pathCovvalue <- cbind(pathCovvalueconstant,pathCovvaluevariance)
 pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
 
-if (!is.null(covvars)) {
+if (!is.null(covvars) & covariance == TRUE) {
 pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             free = pathCovfree,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
-} else {
-pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
-                            name = "pCov")  
-}
+} #else {
+#pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
+#                            name = "pCov")  
+#}
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
@@ -497,11 +503,6 @@ pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
-#pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-#                  free = freepathE,
-#                  values = valuespathE,
-#                  labels = pathElabel,
-#                  name = "e")
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
@@ -518,7 +519,7 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   name = "e")  
 }
 pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
-if (!is.null(covvars)) {
+if (!is.null(covvars) & covariance == TRUE) {
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
                                               cbind(pZ,b)),pCov), name = "pM")
 }
@@ -613,7 +614,11 @@ matI <- mxMatrix(type = "Iden", nrow = t, ncol = t, name = "I")
 covMZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SMZ%*%t(solve(I-A))%*%t(Filter), name = "expCovMZ")
 covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Filter), name = "expCovDZ")
 
+###############################################################################
 # Mean Matrix
+###############################################################################
+
+if (covariance == TRUE) {
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(variables, split=sep, fixed=TRUE), function(x) (x[1])))))
 meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
 meanlabel <- c(meanmanifestlabel,meanacelabel)
@@ -622,26 +627,77 @@ matM <- mxMatrix(type = "Full", nrow = t, ncol = 1,
                  labels = c(meanmanifestlabel,meanacelabel),
                  values = c(svmean,rep(0,l)), 
                  name = "M")
-if (!is.null(ordinal)) {
-if (2 %in% ordinallength) {
+mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
+}
+
+if (covariance == FALSE & !is.null(covvars)) {
+meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(acevarswide, split=sep, fixed=TRUE), function(x) (x[1])))))
+meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
+meanlabel <- c(meanmanifestlabel,meanacelabel)
+matM <- mxMatrix(type = "Full", nrow = m+l, ncol = 1, 
+                 free = c(rep(TRUE,m),rep(FALSE,l)), 
+                 labels = c(meanmanifestlabel,meanacelabel),
+                 values = c(svmean,rep(0,l)), 
+                 name = "M") 
+}
+
+if (!is.null(ordinal) & (2 %in% ordinallength)) {
 binarytrue <- nTh == 1
 binaryvar <- ordinalwide[binarytrue]
 binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
 binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
+if (covariance == TRUE) {
 binaryflag <- c(binaryace,binaryrest)
-# fixed means
-binaryflag # FALSE = Non binary; TRUE = binary -> for the mean estimation we can reverse it 
- # if there are any binary variables
 svmean_manifests <- binaryflag == FALSE
-svmean_manifests # insert this vector into the "free"-argument if there are binary variables in the model
 matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
                  free = c(svmean_manifests,rep(FALSE,l)), 
                  labels = c(meanmanifestlabel,meanacelabel),
                  values = c(svmean,rep(0,l)), 
                  name = "M")
-}
-}
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
+}
+if (covariance == FALSE & !is.null(covvars)) {
+binaryflag <- binaryace
+svmean_manifests <- binaryflag == FALSE
+meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(acevarswide, split=sep, fixed=TRUE), function(x) (x[1])))))
+meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
+meanlabel <- c(meanmanifestlabel,meanacelabel)
+matM <- mxMatrix(type = "Full", nrow = m+l, ncol = 1, 
+                 free = c(svmean_manifests,rep(FALSE,l)), 
+                 labels = c(meanmanifestlabel,meanacelabel),
+                 values = c(svmean,rep(0,l)), 
+                 name = "M") 
+}
+}
+
+if (covariance == TRUE) {
+# matrix with effect sizes of moderation of the means stored in M
+pathCov <- mxMatrix(type = "Full", nrow = c, ncol = ntv, byrow = FALSE,
+                            free = t(pathCovfree),
+                            values = t(pathCovvalue),
+                            labels = t(pathCovlabel),
+                            name = "pCov")
+
+# Matrix of definition variables for mean moderation
+labeldef <- paste0("data",".",covvarsall)
+defM      <- mxMatrix( type="Full", nrow=1, ncol=c, free=FALSE, labels=labeldef, name="defM" )
+
+# Matrix effects on means
+effMean <- mxAlgebra(expression = defM%*%pCov, name = "effM")
+
+# Vector of latent variables (all set to zero) just need to concatenate them to the manifests to get the dimensions right
+latentmeans <- mxMatrix(type = "Full", nrow = l, ncol = 1, name = "lmeans")
+
+# Concatenate the manifest with the latent means vector
+effMeanFull <- mxAlgebra(expression = cbind(effM,lmeans), name = "effMFull")
+
+# Matrix of moderated means
+modMean <- mxAlgebra(expression =M+effMFull, name = "modM")
+
+# Matrix of expected means
+mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%modM), name = "expMean")
+}
+
 
 # Define data object
 dataMZ    <- mxData(observed=mzData, type="raw")
@@ -702,9 +758,11 @@ if (!is.null(ordinal)) {
 pars <- c(pars,c(thinG,inc,threG))
 }
 
-#if (2 %in% ordinallength) {
-#pars <- c(pars,binary)
-#}
+if (covariance == FALSE & !is.null(covvars)) {
+covmeanpars <- c(defM,effMean,latentmeans,effMeanFull,modMean)  
+pars <- c(pars,covmeanpars)
+}
+
 
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
