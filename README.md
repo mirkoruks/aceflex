@@ -1,6 +1,6 @@
-## aceflex
+# aceflex
 
-# Some genereal remarks
+## Some genereal remarks
 - Here, I confine myself to explain the aims and elements of the function on a very basic level. If you want more information, please write me a mail or find a more detailed explanation [here](https://mirkoruks.github.io/).
 - It's still a **beta version**. So if you find some bugs - I am sure they exist - or have any comments, questions or suggestions, I am happy if you send me a mail to mirko.ruks@uni-bielefeld.de
 
@@ -10,7 +10,7 @@ At the moment you can use the function to estimate univariate or multivariate AC
 
 Regarding the scale of the decomposed variables, there are no constraints! You can decompose continuous variables or categorical (that is: ordinal or dichotomous) variables. For the categorical variables, the functions estimates a liability threshold model which assumes that the categorical variables are "imperfect" measures of a true, underlying liability/risk/propensity. This liability is not observed and is considered as a latent factor. For dichotomous variable, the scale of this underlying latent variable is fixed to 1 and the mean to 0, while the threshold is estimated. For variables with three or more categories, the function follows the approach discussed by [Mehta et al. (2004)](https://doi.org/10.1037/1082-989x.9.3.301) and constrains the first two thresholds allowing to estimate the variance and mean of the underlying latent variable. At the moment, the covariates are exogenous variables, so there is no need to estimate a liability threshold model for them. If some of your covariates are not continuous, you can recode them to dichotomous variables and enter them into the model.
 
-# The function decomposed
+## The function decomposed
 Here is the complete function with its argument, including their default values (if defined):
 <pre><code>
 twinflex(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol")
@@ -29,7 +29,7 @@ Some information about the arguments:
 - `tryHard`: If `TRUE` the function uses `mxTryHard()` to estimate the model, which means that it makes multiple attempts to fit the model with different starting values. Sometimes bad starting values can ruin your model (although I tried to choose them wisely). The default is `FALSE`. So, if you encounter some problems you may switch to `tryHard = TRUE`
 - `type`: Here you can choose the default model type for the multivariate case: `type = "aceb"` refers to the ACE beta model (it's the default) and `type = "chol"` refers to the Cholesky model. Soon. If implemented, you can choose between `type = "CF"` for the correlated factor model and `type = "VC"` for the variance component model, as well. 
 
-# What is planned to be added 
+## What is planned to be added 
 - Moderation of the paths of the ACE components and the phenotypic paths between the decomposed variables. I am still not sure whether the default should be to moderate also the effects of the covariates defined in the covariance matrix. Maybe I just define the moderations, but set them to zero, so the user can decide whether they are relevant (see next point).
 - Define and label parameters not estimated in the default model. For example, in a bivariate Cholesky model there are no correlations of the ACE components defined. It is planned to define and label these parameters, so that the users can access them after having estimated the model. So you could switch between a Cholesky and, e.g. a CF model by constraining the cross paths of the ACE components to zero and setting the correlations free. So you could decompose the covariation between decomposed variables that are considered exogenous or where you are agnostic regarding a causal or temporal order, by correlations and the covariation between the decomposed variables that are considered exogenous and the variables considered to be endogenous via cross paths and/or phenotypic paths. 
 - It would be cool if there exists a possibility to integrate a measurement model into the ACE models with `twinflex`. But I still need to think how this might be possible without making the coding too complex.
