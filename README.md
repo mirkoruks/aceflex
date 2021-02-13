@@ -12,7 +12,7 @@ Regarding the scale of the decomposed variables, there are no constraints! You c
 
 Here is the complete function with its argument, including their default values (if defined):
 <pre><code>
-twinflex(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = "SLSQP", tryHard = FALSE, type = "chol")
+twinflex(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol")
 </code></pre>
 
 Some information about the arguments:
@@ -24,6 +24,6 @@ Some information about the arguments:
 - `covvars`: Here you can enter the covariates. Like for the acevars, you must not enter the variables with the twin specific suffix. You can enter variables with or without within-twin-pair variance. The function checks if there is within-pair variance automatically. The default is `covvars = NULL`, so if you don't enter covariates, the function assumes that there are none. 
 - `covariance`: Here you can define if you want to enter the covariates in the covariance matrix or as "definition variables" in the means vector.
 - `ordinal`: It is a vector of strings specifying which of the elements of `acevars` are ordinal variables. If you want to decompose extraversion and education in a multivariate model - so `acevars = c("extraversion", "education")` - and education is a ordinal variable, you need to write `acevars = "education"`. By default, the function assumes that all variables are continuous.
-- `optimizer`: Choose your preferred estimator. There are three options: `"SLSQP"`, `"NPSOL"` and `"CSOLNP"`. You can check the OpenMx documentation or the OpenMx forum to figure out the differences. "SLSQP" is the default
+- `optimizer`: Choose your preferred estimator. There are three options: `"SLSQP"`, `"NPSOL"` and `"CSOLNP"`. You can check the OpenMx documentation or the OpenMx forum to figure out the differences. For continuous data "SLSQP" is the default, for models with ordinal variables, `"CSOLNP"` is the default. `"NPSOL"` is not included in the CRAN-version of OpenMx. If you want to know how to install the OpenMx version with `"NPSOL"` installed, you might check [this](https://openmx.ssri.psu.edu/installing-openmx) out.
 - `tryHard`: If `TRUE` the function uses `mxTryHard()` to estimate the model, which means that it makes multiple attempts to fit the model with different starting values. Sometimes bad starting values can ruin your model (although I tried to choose them wisely). The default is `FALSE`. So, if you encounter some problems you may switch to `tryHard = TRUE`
 - `type`: Here you can choose the default model type for the multivariate case: `type = "aceb"` refers to the ACE beta model (it's the default) and `type = "chol"` refers to the Cholesky model. Soon. If implemented, you can choose between `type = "CF"` for the correlated factor model and `type = "VC"` for the variance component model, as well. 
