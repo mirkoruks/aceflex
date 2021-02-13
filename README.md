@@ -1,7 +1,7 @@
 # aceflex
 
 ## Some genereal remarks
-- Here, I confine myself to explain the aims and elements of the function on a very basic level. If you want more information, please write me a mail or find a more detailed explanation [here](https://mirkoruks.github.io/).
+- Here, I confine myself to explain the aims and elements of the function on a very basic level. If you want more information, please write me a mail or find a more detailed explanation [here](https://mirkoruks.github.io/) soon.
 - It's still a **beta version**. So if you find some bugs - I am sure they exist - or have any comments, questions or suggestions, I am happy if you send me a mail to mirko.ruks@uni-bielefeld.de
 
 `aceflex` is a function for flexible twin modeling. It is a wrapper for [OpenMx](https://openmx.ssri.psu.edu/), a very powerful and flexible package to calculate structural equation models. However, flexibility is somewhat positively correlated with complexity and defining the model using matrix algebra might be a high hurdle if you only want to estimate a simple univariate or multivariate model. So, the aim of `twinflex` is to reduce the complexity of the modeling proces while maintaining as much as possible the flexibility. The idea of `twinflex` is to produce a baseline model which you then can adjust according your own needs using by fixing free parameter and/or setting free fixed parameters using the `omxSetParameters` function of the OpenMx package. So, in the multivariate case, `twinflex` may estimate a model with a lot of parameters you are actually not interested in. In this case, just use `omxSetParameters` so adjust the model - you can control the model fitting process doing some LR-tests if needed. 
