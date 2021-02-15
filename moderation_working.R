@@ -1,14 +1,28 @@
 # Implement moderation 
-  library(OpenMx)
-  
-  ## INTEGRATE UNI AND BIVARIATE MODERATION OF ACE
-  ## INTEGRATE BETA  MODERATION
+rm(list = ls())
+
+# load packages
+library(OpenMx)
+library(dplyr)
+library(OpenMx)
+library(xtable)
+
+data <- read.csv(file = "C:/Users/Besitzer/Documents/Arbeit/Twinlife/Artikel/Netzwerke/Git/netzwerke/Update/data_wide.csv",
+                      header = TRUE)
+# create binary
+data <- data %>% 
+  mutate(schoolbin_1 = ifelse(schoolhigh_1 %in% c(1,2), 1,
+                       ifelse(schoolhigh_1 %in% c(3,4), 2, NA))) %>% 
+  mutate(schoolbin_2 = ifelse(schoolhigh_2 %in% c(1,2), 1,
+                       ifelse(schoolhigh_2 %in% c(3,4), 2, NA))) %>% rename(zy = zyg)
+summary(data)
+## INTEGRATE BETA  MODERATION
 # moderation only of paths from ACE components on decomposed variables and from decomposed variables on decomposed variables
 
 # new arguments:
-  # moderation = NULL ## TRUE if moderation needed
-  # modACEuniv = NULL ## if moderation = TRUE -> specify here if you want to moderate univariate ACE paths, and if yes, of which variables
-    # input element = character vector of variables: The univariate ACE paths of each variable specified in the vector will be moderated 
+  # modACEuniv = NULL ## specify a string vector which univariate ACE paths you want to interact with which moderator 
+    # Example: modACEuniv <- c("posbez BY schoolhigh + sex","negbez BY schoolhigh + iseiempmean")
+    # Explanation: Moderate univariate ACE paths of posbez by schoolhigh and sex; moderate univariate ACE paths of negbez by schoolhigh and iseiempmean
   # modACEbiv = NULL ## if moderation = TRUE -> specify here if you want to moderate bivariate ACE paths, and if yes, of which variable pairs 
     # input element = character vector of variable relationships
       # e.g.: Both, X and Y are ACE decomposed variables and the user wants to moderate the effect of the ACE components of X on Y -> 
@@ -16,14 +30,35 @@
   # modBeta = NULL ## if moderation = TRUE -> specify here if you want to moderate a phenotypic paths between acevars, and if yes, of which variables
 
 # necessary stuff to keep it running
-acevars <- c("X","Z","Y") # three variables to be decomposed into ACE components
+acevars <- c("posbez","negbez") # three variables to be decomposed into ACE components
 nv <- length(acevars) # Vars per twin
-modACEbiv <- c("X   -> Y","Z -> Y")
-modBeta <- c("X->Y")
-modACEbiv2 <- c("X   -> Y BY K","Z -> Y BY K + Mod2")
-modACEbiv2
-#grepl("+",modACEbiv2)
-#strsplit(modACEbiv2, split = "\\->|BY|\\+")
+#modACEbiv <- c("X   -> Y","Z -> Y")
+sep = "_"
+modACEuniv <- c("posbez BY schoolhigh + sex","negbez BY schoolhigh + iseiempmean")
+modACEbiv <- c("posbez   -> negbez BY schoolhigh + age")
+modBeta <- c("posbez->negbez BY sex")
+existence <- function(variable) {
+  result <- NULL
+if(variable %in% colnames(data))
+{
+  result <- NULL
+}
+else if (!(variable %in% colnames(data))) {
+  result <- variable
+}
+}
+
+existenceerror <- function(result) {
+  if (!is.null(result)) {
+  stop(c("I could not find a variable(s) in the data frame corresponding to the following variable strings you gave me: ",paste(result, sep = " ", collapse = ", ")))
+  
+  }
+  }
+
+
+###############################################################################
+###############################################################################
+# From here on: Code to be implemented! 
 
 splitit <- function(input) {
 if (grepl("+",input) == TRUE) {
@@ -31,352 +66,463 @@ result <- unlist(strsplit(input, split = "\\->|BY|\\+"))
 } else {
 result <- unlist(strsplit(input, split = "\\->|BY"))
 }
-  
 }
-test <- lapply(modACEbiv2,splitit)
 
-moderatedbivACE <- vector(mode = "list", length = length(modACEbiv2))
-moderatorbivACE <- vector(mode = "list", length = length(modACEbiv2))
-for (i in 1:length(modACEbiv2)) {
-test[[i]] <- trimws(test[[i]])
-moderatedbivACE[[i]] <- test[[i]][1:2] # save moderated vars
-moderatorbivACE[[i]] <- test[[i]][3:length(test[[i]])] # save moderators
+###############################################################################
+# Moderation of ACE paths
+###############################################################################
+
+# Check if ACE paths are moderated
+if (!is.null(modACEuniv) | !is.null(modACEbiv)) {
+  ACEmoderation <- TRUE
+} else {
+  ACEmoderation <- FALSE
 }
-test
+
+# Check if beta paths are moderated
+if (!is.null(modACEuniv) | !is.null(modACEbiv)) {
+  ACEmoderation <- TRUE
+} else {
+  ACEmoderation <- FALSE
+}
+
+
+
+
+if (ACEmoderation == TRUE) {
+###############################################################################
+# univariate ACE moderation
+###############################################################################
+  
+varsACEuniv <- lapply(modACEuniv,splitit)
+moderatedunivACE <- list()
+moderatorunivACE <- list()
+for (i in 1:length(modACEuniv)) {
+varsACEuniv[[i]] <- trimws(varsACEuniv[[i]])
+moderatedunivACE[[i]] <- varsACEuniv[[i]][1] # save moderated vars
+moderatorunivACE[[i]] <- varsACEuniv[[i]][2:length(varsACEuniv[[i]])] # save moderators
+}
+varsACEuniv
+moderatedunivACE
+moderatorunivACE
+modvarsACEuniv <- unique(unlist(moderatorunivACE))
+modvarsACEuniv
+
+###############################################################################
+# bivariate ACE moderation
+###############################################################################
+varsACEbiv <- lapply(modACEbiv,splitit)
+moderatedbivACE <- list()
+moderatorbivACE <- list()
+for (i in 1:length(modACEbiv)) {
+varsACEbiv[[i]] <- trimws(varsACEbiv[[i]])
+moderatedbivACE[[i]] <- varsACEbiv[[i]][1:2] # save moderated vars
+moderatorbivACE[[i]] <- varsACEbiv[[i]][3:length(varsACEbiv[[i]])] # save moderators
+}
+varsACEbiv
 moderatedbivACE
 moderatorbivACE
 modvarsACEbiv <- unique(unlist(moderatorbivACE))
 modvarsACEbiv
 
-# create matrix of interaction effects
-modmat <- matrix(0,nrow = 3,ncol = 3, dimnames = list(acevars,acevars))
-modpathACEfree <- modmat!=0
-
-freeList <- list()
-count <- 1 
-for (j in modvarsACEbiv) {
-freevector <- modpathACEfree
-for (i in test) {
-if (j %in% i) {
-index <- paste0("Mod",count)
-freevector[as.vector(i)[2],as.vector(i)[1]] <- TRUE
-freeList[[index]] <-  freevector
-}
-}
-count <- count+1
-}
-View(freeList)
-
-labelList <- list()
-nvstring <- as.character(1:nv)
-for (i in c("a","c","e")) {
-pathModlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",i,x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
-pathModlabel[upper.tri(pathAModlabel, diag = FALSE)] <- NA
-labelList[[i]] <-pathModlabel
-}
-View(labelList)
-
-count <- 1
-pathModStore <- list()
-for (i in names(freeList)) {
-for (j in names(labelList)) {
-  index <- paste0("pathMod",count,j)
-  name <- paste0("pMod",count,j)
-matrixstore <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
-                       labels = labelList[[j]],
-                       free = freeList[[i]],
-                       values = 0,
-                       name = name)
-pathModStore[[index]] <- matrixstore
-}
-count <- count+1
-}
-View(pathModStore)
-
-#assign(paste0("path", i,j), pathModStore)
-
-# create list with matrices of moderators of bivariate ACE paths
-defMod <- list()
-count = 1
-for (i in modvarsACEbiv) {
-index <- paste0("dMod",count)
-label <- paste0("data.",i) 
-defMod[[index]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label, name= index)
-count <- count +1
-}
-View(defMod)
-View(pathModStore)
-
-def <- NULL
-for (i in names(defMod)) {
-assign(paste0("def", i), defMod[[i]])
-}
-
-path <- NULL
-for (i in names(pathModStore)) {
-assign(paste0("path", i), pathModStore[[i]])
-}
-
-modvars <- modvarsACEbiv
-# generate moderated paths
-  # for long formatted moderators -> save with wide name but long label -> e.g. aMod11 and aMod12 with label "data.Mod1", that is, they are identical!
-
-if (length(modvars == 1)) {
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod11, name = "aMod1")
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod12, name = "aMod2")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod11, name = "cMod1")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod12, name = "cMod2")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod11, name = "eMod1")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod12, name = "eMod2")
-} else if (length(modvars == 2)) {
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod11 + pMod2a*defMod21, name = "aMod1")
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod12 + pMod2a*defMod22, name = "aMod2")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod11 + pMod2c*defMod21, name = "cMod1")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod12 + pMod2c*defMod22, name = "cMod2")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod11 + pMod2e*defMod21, name = "eMod1")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod12 + pMod2e*defMod22, name = "eMod2") 
-} else if (length(modvars == 3)) {
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod11 + pMod2a*defMod21 + pMod3a*defMod31, name = "aMod1")
-  aModFull <- mxAlgebra(expression = a + pMod1a*defMod12 + pMod2a*defMod22 + pMod3a*defMod31, name = "aMod2")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod11 + pMod2c*defMod21 + pMod3c*defMod31, name = "cMod1")
-  cModFull <- mxAlgebra(expression = c + pMod1c*defMod12 + pMod2c*defMod22 + pMod3c*defMod31, name = "cMod2")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod11 + pMod2e*defMod21 + pMod3e*defMod31, name = "eMod1")
-  eModFull <- mxAlgebra(expression = e + pMod1e*defMod12 + pMod2e*defMod22 + pMod3e*defMod31, name = "eMod2") 
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if (!is.na(modvars[4])) {
- if (modvarswide[4]==FALSE) {
-pathaMod4 <- mxAlgebra(expression = pathMod4a*defMod4, name = "aMod4")
-pathcMod4 <- mxAlgebra(expression = pathMod4c*defMod4, name = "cMod4")
-patheMod4 <- mxAlgebra(expression = pathMod4e*defMod4, name = "eMod4")
-} else if (modvarswide[4]==TRUE) {
-pathaMod41 <- mxAlgebra(expression =pathMod4a*defMod41, name = "aMod41")
-pathcMod41 <- mxAlgebra(expression =pathMod4c*defMod41, name = "cMod41")
-patheMod41 <- mxAlgebra(expression =pathMod4e*defMod41, name = "eMod41")  
-pathaMod42 <- mxAlgebra(expression =pathMod4a*defMod42, name = "aMod42")
-pathcMod42 <- mxAlgebra(expression =pathMod4c*defMod42, name = "cMod42")
-patheMod42 <- mxAlgebra(expression =pathMod4e*defMod42, name = "eMod42") 
-}  
-}
-if (!is.na(modvars[5])) {
- if (modvarswide[5]==FALSE) {
-pathaMod5 <- mxAlgebra(expression = pathMod5a*defMod5, name = "aMod5")
-pathcMod5 <- mxAlgebra(expression = pathMod5c*defMod5, name = "cMod5")
-patheMod5 <- mxAlgebra(expression = pathMod5e*defMod5, name = "eMod5")
-} else if (modvarswide[5]==TRUE) {
-pathaMod51 <- mxAlgebra(expression =pathMod5a*defMod51, name = "aMod51")
-pathcMod51 <- mxAlgebra(expression =pathMod5c*defMod51, name = "cMod51")
-patheMod51 <- mxAlgebra(expression =pathMod5e*defMod51, name = "eMod51")  
-pathaMod52 <- mxAlgebra(expression =pathMod5a*defMod52, name = "aMod52")
-pathcMod52 <- mxAlgebra(expression =pathMod5c*defMod52, name = "cMod52")
-patheMod52 <- mxAlgebra(expression =pathMod5e*defMod52, name = "eMod52") 
-}  
-}
-
-else if (length(modvars == 1) & modvarswide[1]==TRUE) {
-
-modpars <- c(aMod1,cMod1,eMod1,pathaMod,pathcMod,patheMod)
-  
-} else if (length(modvars == 2)) {
-aMod1 <- mxAlgebra(expression = pathMod1a*defMod1, name = "aM1")
-cMod1 <- mxAlgebra(expression = pathMod1c*defMod1, name = "cM1")
-eMod1 <- mxAlgebra(expression = pathMod1e*defMod1, name = "eM1")
-aMod2 <- mxAlgebra(expression = pathMod2a*defMod2, name = "aM2")
-cMod2 <- mxAlgebra(expression = pathMod2c*defMod2, name = "cM2")
-eMod2 <- mxAlgebra(expression = pathMod2e*defMod2, name = "eM2")
-pathaMod <- mxAlgebra(expression = a +aM1+aM2, name = "aMod")
-pathcMod <- mxAlgebra(expression = a +cM1+cM2, name = "cMod")
-patheMod <- mxAlgebra(expression = a +eM1+eM2, name = "eMod")
-} else if (length(modvars == 3)) {
-aMod1 <- mxAlgebra(expression = pathMod1a*defMod1, name = "aM1")
-cMod1 <- mxAlgebra(expression = pathMod1c*defMod1, name = "cM1")
-eMod1 <- mxAlgebra(expression = pathMod1e*defMod1, name = "eM1")
-aMod2 <- mxAlgebra(expression = pathMod2a*defMod2, name = "aM2")
-cMod2 <- mxAlgebra(expression = pathMod2c*defMod2, name = "cM2")
-eMod2 <- mxAlgebra(expression = pathMod2e*defMod2, name = "eM2")
-aMod3 <- mxAlgebra(expression = pathMod3a*defMod3, name = "aM3")
-cMod3 <- mxAlgebra(expression = pathMod3c*defMod3, name = "cM3")
-eMod3 <- mxAlgebra(expression = pathMod3e*defMod3, name = "eM3")
-pathaMod <- mxAlgebra(expression = a +aM1+aM2+aM3, name = "aMod")
-pathcMod <- mxAlgebra(expression = a +cM1+cM2+cM3, name = "cMod")
-patheMod <- mxAlgebra(expression = a +eM1+eM2+eM3, name = "eMod")
-} else if (length(modvars == 4)) {
-aMod1 <- mxAlgebra(expression = pathMod1a*defMod1, name = "aM1")
-cMod1 <- mxAlgebra(expression = pathMod1c*defMod1, name = "cM1")
-eMod1 <- mxAlgebra(expression = pathMod1e*defMod1, name = "eM1")
-aMod2 <- mxAlgebra(expression = pathMod2a*defMod2, name = "aM2")
-cMod2 <- mxAlgebra(expression = pathMod2c*defMod2, name = "cM2")
-eMod2 <- mxAlgebra(expression = pathMod2e*defMod2, name = "eM2")
-aMod3 <- mxAlgebra(expression = pathMod3a*defMod3, name = "aM3")
-cMod3 <- mxAlgebra(expression = pathMod3c*defMod3, name = "cM3")
-eMod3 <- mxAlgebra(expression = pathMod3e*defMod3, name = "eM3")
-aMod4 <- mxAlgebra(expression = pathMod4a*defMod4, name = "aM4")
-cMod4 <- mxAlgebra(expression = pathMod4c*defMod4, name = "cM4")
-eMod4 <- mxAlgebra(expression = pathMod4e*defMod4, name = "eM4")
-pathaMod <- mxAlgebra(expression = a +aM1+aM2+aM3+aM4, name = "aMod")
-pathcMod <- mxAlgebra(expression = a +cM1+cM2+cM3+cM4, name = "cMod")
-patheMod <- mxAlgebra(expression = a +eM1+eM2+eM3+eM4, name = "eMod")
-} else if (length(modvars == 5)) {
-aMod1 <- mxAlgebra(expression = pathMod1a*defMod1, name = "aM1")
-cMod1 <- mxAlgebra(expression = pathMod1c*defMod1, name = "cM1")
-eMod1 <- mxAlgebra(expression = pathMod1e*defMod1, name = "eM1")
-aMod2 <- mxAlgebra(expression = pathMod2a*defMod2, name = "aM2")
-cMod2 <- mxAlgebra(expression = pathMod2c*defMod2, name = "cM2")
-eMod2 <- mxAlgebra(expression = pathMod2e*defMod2, name = "eM2")
-aMod3 <- mxAlgebra(expression = pathMod3a*defMod3, name = "aM3")
-cMod3 <- mxAlgebra(expression = pathMod3c*defMod3, name = "cM3")
-eMod3 <- mxAlgebra(expression = pathMod3e*defMod3, name = "eM3")
-aMod4 <- mxAlgebra(expression = pathMod4a*defMod4, name = "aM4")
-cMod4 <- mxAlgebra(expression = pathMod4c*defMod4, name = "cM4")
-eMod4 <- mxAlgebra(expression = pathMod4e*defMod4, name = "eM4")
-aMod5 <- mxAlgebra(expression = pathMod5a*defMod5, name = "aM5")
-cMod5 <- mxAlgebra(expression = pathMod5c*defMod5, name = "cM5")
-eMod5 <- mxAlgebra(expression = pathMod5e*defMod5, name = "eM5")
-pathaMod <- mxAlgebra(expression = a +aM1+aM2+aM3+aM4+aM5, name = "aMod")
-pathcMod <- mxAlgebra(expression = a +cM1+cM2+cM3+cM4+cM5, name = "cMod")
-patheMod <- mxAlgebra(expression = a +eM1+eM2+eM3+eM4+eM5, name = "eMod")
-}
-
-
-
-
-for (i in names(defMod)) {
-  for (j in names(pathModStore)) {
-    if (grepl(i,j)) {
-      namevec <- paste0("M",j)
-      moderatedACE[[namevec]] <- mxAlgebra(expression = pathModStore[[j]]@name * defMod[[i]]@name, name = namevec)
+###############################################################################
+# Check if moderator long or wide formatted
+###############################################################################
+modmatACE <- matrix(0,nrow = nv,ncol = nv, dimnames = list(acevars,acevars))
+pathModACEfree <- modmatACE != 0
+
+modvarsACEuser <- unique(c(modvarsACEuniv,modvarsACEbiv))
+modvarsACEmachine <- paste0("Mod",1:length(modvarsACEuser))
+legendmodACE <- rbind(modvarsACEuser,modvarsACEmachine)
+legendmodACE
+
+modvarsACEuser1 <-    paste0(modvarsACEuser,sep,"1") # Covariates twin 1
+modvarsACEuser2 <-    paste0(modvarsACEuser,sep,"2") # Covariates twin 2
+modvarsACEuserwide <- c(modvarsACEuser1, modvarsACEuser2)
+
+modvarsACEusernotwide <- unlist(lapply(modvarsACEuserwide, existence))
+modvarsACEusernotwide <- unique(sapply(strsplit(modvarsACEusernotwide, split = sep, fixed = TRUE), function(x) (x[1])))
+
+modACElong <- rep(FALSE,length(modvarsACEuser))
+
+for (i in 1:length(modvarsACEuser)) {
+  for (j in 1:length(modvarsACEusernotwide)) {
+    if (modvarsACEuser[i]==modvarsACEusernotwide[j]) {
+      modACElong[i] <- TRUE
     }
   }
 }
-View(moderatedACE)
-##################################################################
-##################################################################
+modvarsACEuser
+modACElong
 
-# extract variables for bivariate moderation
-getmodvars <- function(vector) {
-varsnoarrow <- unlist(strsplit(vector, "->")) # remove arrow
-onlyvars <- trimws(varsnoarrow) # remove white space (if there is some)
-xvar <- onlyvars[1] # save X var
-yvar <- onlyvars[2] # save Y var
-result <- c(xvar,yvar)
+###############################################################################
+# Create matrix of interaction effects
+###############################################################################
+
+
+
+# Change names of Moderators
+for (i in 1:length(modvarsACEuser)) {
+  print(i)
+varsACEuniv <- lapply(varsACEuniv,gsub, pattern = modvarsACEuser[i], replacement = modvarsACEmachine[i])
+}
+for (i in 1:length(modvarsACEuser)) {
+  print(i)
+varsACEbiv <- lapply(varsACEbiv,gsub, pattern = modvarsACEuser[i], replacement = modvarsACEmachine[i])
+}
+print(varsACEuniv)
+print(varsACEbiv)
+
+# create list that indexes free and fixed interaction effects
+freeModACE <-list()
+    # Univariate ACE interaction effects
+count <- 1 
+for (j in modvarsACEmachine) {
+freevector <- pathModACEfree
+for (i in varsACEuniv) {
+if (j %in% i) {
+index <- paste0("Mod",count)
+diag(freevector) <- TRUE
+freeModACE[[index]] <-  freevector
+}
+}
+count <- count+1
 }
 
-if (!is.null(modACEbiv)) {
-modACEbivvars <- lapply(modACEbiv, getmodvars)
+  # Bivariate ACE interaction effects
+count <- 1 
+for (j in modvarsACEmachine) {
+for (i in varsACEbiv) {
+if (j %in% i) {
+index <- paste0("Mod",count)
+print(index)
+if (!is.null(freeModACE[[index]])) {
+freeModACE[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
 }
-if (!is.null(modBeta)) { # don't forget the additional condition: & type = "aceb" !!
-modBetavars <- lapply(modBeta, getmodvars)
+if (is.null(freeModACE[[index]])) {
+freeModACE[[index]] <-  freevector
+freeModACE[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
+}
+}
+}
+count <- count+1
 }
 
-# the function (I still need to figure out how to implement the self referencing element here as in the loop)
-#setfree <- function(condition, target) {
-#condition <- as.vector(condition)
-#target[condition[2],condition[1]] <- TRUE
-#target
-#}
-# lapply(modACEbivvars, setfree, target = freemodpathB)
+freeModACE
 
-# modACEbiv
-
-modmat <- matrix(0,nrow = 3,ncol = 3, dimnames = list(acevars,acevars))
-modpathACEfree <- modmat!=0
-for (i in modACEbivvars) {
-modpathACEfree[as.vector(i)[2],as.vector(i)[1]] <- TRUE
-modpathACEfree
+# create list that stores labels of interaction effects
+labelACE <- list()
+nvstring <- as.character(1:nv)
+for (j in 1:length(freeModACE)) {
+for (i in c("a","c","e")) {
+pathModACElabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("Mod",j,"b",i,x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathModACElabel[upper.tri(pathModACElabel, diag = FALSE)] <- NA
+labelACE[[paste0("Mod",j,i)]] <-pathModACElabel
 }
-modpathACEfree
+}
+View(labelACE)
 
-
-
-
-pathAMod <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
-                       labels = pathAModlabel,
-                       free = modpathACEfree,
+# create list that stores matrices of interaction effects
+count <- 1
+pathModACEStore <- list()
+for (i in names(freeModACE)) {
+for (j in names(labelACE)) {
+  index <- paste0("path",j)
+  name <- paste0("p",j)
+matrixstore <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
+                       labels = labelACE[[j]],
+                       free = freeModACE[[i]],
                        values = 0,
-                       name = "aMod")
-pathCMod <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
-                       labels = pathAModlabel,
-                       free = modpathACEfree,
-                       values = 0,
-                       name = "bMod")
-pathEMod <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
-                       labels = pathAModlabel,
-                       free = modpathACEfree,
-                       values = 0,
-                       name = "bMod")
-
-# define matrix of definition variables
-
-# modBeta
-modmat <- matrix(0,nrow = 3,ncol = 3, dimnames = list(acevars,acevars))
-freemodpathBeta <- modmat!=0
-for (i in modBetavars) {
-freemodpathBeta[as.vector(i)[2],as.vector(i)[1]] <- TRUE
-freemodpathBeta
+                       name = name)
+pathModACEStore[[index]] <- matrixstore
 }
-freemodpathBeta
+count <- count+1
+}
+
+View(pathModACEStore)
+
+## differentiate between long and wide formatted moderators
+modACElong
+# create list with matrices of moderators of ACE paths
+defModACE <- list()
+for (i in 1:length(modvarsACEmachine)) { # needed: new vector with same length as modvarsACEmachine, indicating whether moderator is long formatted or not (TRUE/FALSE)
+  if (modACElong[i]==TRUE) { # for long formatted moderators
+name1 <- paste0("d",modvarsACEmachine[i],"1","ACE")
+name2 <- paste0("d",modvarsACEmachine[i],"2","ACE")
+index1 <- paste0("def",modvarsACEmachine[i],"1","ACE")
+index2 <- paste0("def",modvarsACEmachine[i],"2","ACE")
+label <- paste0("data.",modvarsACEuser[i]) 
+defModACE[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label, name= name1)
+defModACE[[index2]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label, name= name2)
+  }
+  if (modACElong[i]==FALSE) { # for wide formatted moderators
+name1 <- paste0("d",modvarsACEmachine[i],"1","ACE")
+name2 <- paste0("d",modvarsACEmachine[i],"2","ACE")
+index1 <- paste0("def",modvarsACEmachine[i],"1","ACE")
+index2 <- paste0("def",modvarsACEmachine[i],"2","ACE")
+label1 <- paste0("data.",modvarsACEuser[i],sep,"1")
+label2 <- paste0("data.",modvarsACEuser[i],sep,"2")
+defModACE[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label1, name= name1)
+defModACE[[index2]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label2, name= name2)  
+  }
+}
+
+# Save matrices with ACE moderators as R objects
+def <- NULL
+for (i in names(defModACE)) {
+assign(i, defModACE[[i]])
+}
+
+# Save matrices with ACE interaction effects as R objects
+path <- NULL
+for (i in names(pathModACEStore)) {
+assign(i, pathModACEStore[[i]])
+}
+
+if (length(modvarsACEmachine) == 1) {
+  aModFull1 <- mxAlgebra(expression = a + pMod1a*dMod11ACE, name = "aMod1")
+  aModFull2 <- mxAlgebra(expression = a + pMod1a*dMod12ACE, name = "aMod2")
+  cModFull1 <- mxAlgebra(expression = c + pMod1c*dMod11ACE, name = "cMod1")
+  cModFull2 <- mxAlgebra(expression = c + pMod1c*dMod12ACE, name = "cMod2")
+  eModFull1 <- mxAlgebra(expression = e + pMod1e*dMod11ACE, name = "eMod1")
+  eModFull2 <- mxAlgebra(expression = e + pMod1e*dMod12ACE, name = "eMod2")
+  ACEmodpars <- c(pathMod1a,pathMod1c,pathMod1e,
+               defMod12ACEACE,defMod12,
+               aModFull1,cModFull1,eModFull1,aModFull2,cModFull2,eModFull2)
+} 
+if (length(modvarsACEmachine) == 2) {
+  aModFull1 <- mxAlgebra(expression = a + pMod1a*dMod11ACE + pMod2a*dMod21ACE, name = "aMod1")
+  aModFull2 <- mxAlgebra(expression = a + pMod1a*dMod12ACE + pMod2a*dMod22ACE, name = "aMod2")
+  cModFull1 <- mxAlgebra(expression = c + pMod1c*dMod11ACE + pMod2c*dMod21ACE, name = "cMod1")
+  cModFull2 <- mxAlgebra(expression = c + pMod1c*dMod12ACE + pMod2c*dMod22ACE, name = "cMod2")
+  eModFull1 <- mxAlgebra(expression = e + pMod1e*dMod11ACE + pMod2e*dMod21ACE, name = "eMod1")
+  eModFull2 <- mxAlgebra(expression = e + pMod1e*dMod12ACE + pMod2e*dMod22ACE, name = "eMod2") 
+  ACEmodpars <- c(pathMod1a,pathMod2a,pathMod1c,pathMod2c,pathMod1e,pathMod2e,
+               defMod12ACEACE,defMod12,defMod21ACE,defMod22ACE,
+               aModFull1,cModFull1,eModFull1,aModFull2,cModFull2,eModFull2)
+} 
+if (length(modvarsACEmachine) == 3) {
+  aModFull1 <- mxAlgebra(expression = a + pMod1a*dMod11ACE + pMod2a*dMod21ACE + pMod3a*dMod31ACE, name = "aMod1")
+  aModFull2 <- mxAlgebra(expression = a + pMod1a*dMod12ACE + pMod2a*dMod22ACE + pMod3a*dMod32ACE, name = "aMod2")
+  cModFull1 <- mxAlgebra(expression = c + pMod1c*dMod11ACE + pMod2c*dMod21ACE + pMod3c*dMod31ACE, name = "cMod1")
+  cModFull2 <- mxAlgebra(expression = c + pMod1c*dMod12ACE + pMod2c*dMod22ACE + pMod3c*dMod32ACE, name = "cMod2")
+  eModFull1 <- mxAlgebra(expression = e + pMod1e*dMod11ACE + pMod2e*dMod21ACE + pMod3e*dMod31ACE, name = "eMod1")
+  eModFull2 <- mxAlgebra(expression = e + pMod1e*dMod12ACE + pMod2e*dMod22ACE + pMod3e*dMod32ACE, name = "eMod2")
+  ACEmodpars <- c(pathMod1a,pathMod2a,pathMod3a,pathMod1c,pathMod2c,pathMod3c,pathMod1e,pathMod2e,pathMod3e,
+               defMod12ACEACE,defMod12,defMod21ACE,defMod22ACE,defMod31ACE,defMod32ACE,
+               aModFull1,cModFull1,eModFull1,aModFull2,cModFull2,eModFull2)
+} 
+if (length(modvarsACEmachine) == 4) {
+  aModFull1 <- mxAlgebra(expression = a + pMod1a*dMod11ACE + pMod2a*dMod21ACE + pMod3a*dMod31ACE + pMod4a*dMod41ACE, name = "aMod1")
+  aModFull2 <- mxAlgebra(expression = a + pMod1a*dMod12ACE + pMod2a*dMod22ACE + pMod3a*dMod32ACE + pMod4a*dMod42ACE, name = "aMod2")
+  cModFull1 <- mxAlgebra(expression = c + pMod1c*dMod11ACE + pMod2c*dMod21ACE + pMod3c*dMod31ACE + pMod4c*dMod41ACE, name = "cMod1")
+  cModFull2 <- mxAlgebra(expression = c + pMod1c*dMod12ACE + pMod2c*dMod22ACE + pMod3c*dMod32ACE + pMod4c*dMod42ACE, name = "cMod2")
+  eModFull1 <- mxAlgebra(expression = e + pMod1e*dMod11ACE + pMod2e*dMod21ACE + pMod3e*dMod31ACE + pMod4e*dMod41ACE, name = "eMod1")
+  eModFull2 <- mxAlgebra(expression = e + pMod1e*dMod12ACE + pMod2e*dMod22ACE + pMod3e*dMod32ACE + pMod4e*dMod42ACE, name = "eMod2") 
+  ACEmodpars <- c(pathMod1a,pathMod2a,pathMod3a,pathMod4a,pathMod1c,pathMod2c,pathMod3c,pathMod4c,pathMod1e,pathMod2e,pathMod3e,pathMod4e,
+               defMod12ACEACE,defMod12,defMod21ACE,defMod22ACE,defMod31ACE,defMod32ACE,defMod41ACE,defMod42ACE,
+               aModFull1,cModFull1,eModFull1,aModFull2,cModFull2,eModFull2)
+} 
+if (length(modvarsACEmachine) == 5) {
+  aModFull1 <- mxAlgebra(expression = a + pMod1a*dMod11ACE + pMod2a*dMod21ACE + pMod3a*dMod31ACE + pMod4a*dMod41ACE + pMod5a*dMod51ACE, name = "aMod1")
+  aModFull2 <- mxAlgebra(expression = a + pMod1a*dMod12ACE + pMod2a*dMod22ACE + pMod3a*dMod32ACE + pMod4a*dMod42ACE + pMod5a*dMod52ACE, name = "aMod2")
+  cModFull1 <- mxAlgebra(expression = c + pMod1c*dMod11ACE + pMod2c*dMod21ACE + pMod3c*dMod31ACE + pMod4c*dMod41ACE + pMod5a*dMod51ACE, name = "cMod1")
+  cModFull2 <- mxAlgebra(expression = c + pMod1c*dMod12ACE + pMod2c*dMod22ACE + pMod3c*dMod32ACE + pMod4c*dMod42ACE + pMod5a*dMod52ACE, name = "cMod2")
+  eModFull1 <- mxAlgebra(expression = e + pMod1e*dMod11ACE + pMod2e*dMod21ACE + pMod3e*dMod31ACE + pMod4e*dMod41ACE + pMod5a*dMod51ACE, name = "eMod1")
+  eModFull2 <- mxAlgebra(expression = e + pMod1e*dMod12ACE + pMod2e*dMod22ACE + pMod3e*dMod32ACE + pMod4e*dMod42ACE + pMod5a*dMod52ACE, name = "eMod2") 
+  ACEmodpars <- c(pathMod1a,pathMod2a,pathMod3a,pathMod4a,pathMod5a,pathMod1c,pathMod2c,pathMod3c,pathMod4c,pathMod5c,pathMod1e,pathMod2e,pathMod3e,pathMod4e,pathMod5e,
+               defMod12ACEACE,defMod12,defMod21ACE,defMod22ACE,defMod31ACE,defMod32ACE,defMod41ACE,defMod42ACE,defMod51ACE,defMod52ACE,
+               aModFull1,cModFull1,eModFull1,aModFull2,cModFull2,eModFull2)
+}
 
 
+pathACE <- mxAlgebra(expression = rbind(cbind(aMod1,cMod1,eMod1,pZ,pZ,pZ),
+                                        cbind(pZ,pZ,pZ,aMod2,cMod2,eMod2)), name = "pACE")
+}
 
+View(ACEmodpars)
+
+
+###############################################################################
+# Moderation of Beta paths
+###############################################################################
+
+if (Betamoderation == TRUE) {
+varsBeta <- lapply(modBeta,splitit)
+moderatedBeta <- list()
+moderatorBeta <- list()
+for (i in 1:length(varsBeta)) {
+varsBeta[[i]] <- trimws(varsBeta[[i]])
+moderatedBeta[[i]] <- varsBeta[[i]][1:2] # save moderated vars
+moderatorBeta[[i]] <- varsBeta[[i]][3:length(varsBeta[[i]])] # save moderators
+}
+varsBeta
+moderatedBeta
+moderatorBeta
+modvarsBeta <- unique(unlist(moderatorBeta))
+modvarsBeta
+
+###############################################################################
+# Check if moderator long or wide formatted
+###############################################################################
+
+modmatBeta <- matrix(0,nrow = nv,ncol = nv, dimnames = list(acevars,acevars))
+pathModBetafree <- modmatBeta!=0
+
+modvarsBetauser <- unique(modvarsBeta)
+modvarsBetamachine <- paste0("Mod",1:length(modvarsBetauser))
+legendmodBeta <- rbind(modvarsBetauser,modvarsBetamachine)
+
+modvarsBetauser1 <-    paste0(modvarsBetauser,sep,"1") # Covariates twin 1
+modvarsBetauser2 <-    paste0(modvarsBetauser,sep,"2") # Covariates twin 2
+modvarsBetauserwide <- c(modvarsBetauser1, modvarsBetauser2)
+
+modvarsBetausernotwide <- unlist(lapply(modvarsBetauserwide, existence))
+modvarsBetausernotwide <- unique(sapply(strsplit(modvarsBetausernotwide, split = sep, fixed = TRUE), function(x) (x[1])))
+
+modBetalong <- rep(FALSE,length(modvarsBetauser))
+
+for (i in 1:length(modvarsBetauser)) {
+  for (j in 1:length(modvarsBetausernotwide)) {
+    if (modvarsBetauser[i]==modvarsBetausernotwide[j]) {
+      modBetalong[i] <- TRUE
+    }
+  }
+}
+modvarsBetauser
+modBetalong
+
+
+###############################################################################
+# Create matrix of interaction effects
+###############################################################################
+
+# Change names of Moderators
+for (i in 1:length(modvarsBetauser)) {
+varsBeta <- lapply(varsBeta,gsub, pattern = modvarsBetauser[i], replacement = modvarsBetamachine[i])
+}
+print(varsBeta)
+
+# create list that indexes free and fixed interaction effects
+freeModBeta <-list()
+
+count <- 1 
+for (j in modvarsBetamachine) {
+freevector <- pathModBetafree
+for (i in varsBeta) {
+if (j %in% i) {
+index <- paste0("Mod",count)
+freeModBeta[[index]] <-  freevector
+freeModBeta[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
+}
+}
+count <- count+1
+}
+
+#View(freeModBeta)
+
+# create list that stores labels of interaction effects
+labelBeta <- list()
+nvstring <- as.character(1:nv)
+for (j in 1:length(freeModBeta)) {
+  print("Hallo")
+pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("Mod",j,"b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
+pathBlabel[upper.tri(pathBlabel, diag = FALSE)] <- NA
+labelBeta[[paste0("Mod",j)]] <-pathBlabel
+}
+
+#View(labelBeta)
+
+# create list that stores matrices of interaction effects
+count <- 1
+pathModBetaStore <- list()
+for (i in names(freeModBeta)) {
+for (j in names(labelBeta)) {
+  index <- paste0("path",j,"Beta")
+  name <- paste0("p",j,"B")
+matrixstore <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
+                       labels = labelBeta[[j]],
+                       free = freeModBeta[[i]],
+                       values = 0,
+                       name = name)
+pathModBetaStore[[index]] <- matrixstore
+}
+count <- count+1
+}
+
+## differentiate between long and wide formatted moderators
+modBetalong
+# create list with matrices of moderators of Beta paths
+defModBeta <- list()
+for (i in 1:length(modvarsBetamachine)) { # needed: new vector with same length as modvarsBetamachine, indicating whether moderator is long formatted or not (TRUE/FALSE)
+  if (modBetalong[i]==TRUE) { # for long formatted moderators
+name1 <- paste0("d",modvarsBetamachine[i],"1","B")
+name2 <- paste0("d",modvarsBetamachine[i],"2","B")
+index1 <- paste0("def",modvarsBetamachine[i],"1","Beta")
+index2 <- paste0("def",modvarsBetamachine[i],"2","Beta")
+label <- paste0("data.",modvarsBetauser[i]) 
+defModBeta[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label, name= name1)
+defModBeta[[index2]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label, name= name2)
+  }
+  if (modBetalong[i]==FALSE) { # for wide formatted moderators
+name1 <- paste0("d",modvarsBetamachine[i],"1","B")
+name2 <- paste0("d",modvarsBetamachine[i],"2","B")
+index1 <- paste0("def",modvarsBetamachine[i],"1","Beta")
+index2 <- paste0("def",modvarsBetamachine[i],"2","Beta")
+label1 <- paste0("data.",modvarsBetauser[i],sep,"1")
+label2 <- paste0("data.",modvarsBetauser[i],sep,"2")
+defModBeta[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label1, name= name1)
+defModBeta[[index2]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label2, name= name2)  
+  }
+}
+#View(defModBeta)
+# Save matrices with Beta moderators as R objects
+def <- NULL
+for (i in names(defModBeta)) {
+assign(i, defModBeta[[i]])
+}
+
+# Save matrices with Beta interaction effects as R objects
+path <- NULL
+for (i in names(pathModBetaStore)) {
+assign(i, pathModBetaStore[[i]])
+}
+  
+if (length(modvarsBetamachine) == 1) {
+  betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B, name = "betaMod1")
+  betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B, name = "betaMod2")
+  Betamodpars <- c(pathMod1Beta,
+               defMod11Beta,defMod12Beta,
+               betaModFull1,betaModFull2)
+} 
+if (length(modvarsBetamachine) == 2) {
+  betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B, name = "betaMod1")
+  betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B, name = "betaMod2")
+  Betamodpars <- c(pathMod1Beta,pathMod2Beta,
+               defMod11Beta,defMod12Beta,defMod21Beta,defMod22Beta,
+               betaModFull1,betaModFull2)
+} 
+if (length(modvarsBetamachine) == 3) {
+  betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B + pMod3B*dMod31B, name = "betaMod1")
+  betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B + pMod3B*dMod32B, name = "betaMod2")
+  Betamodpars <- c(pathMod1Beta,pathMod2Beta,pathMod3Beta,
+               defMod11Beta,defMod12Beta,defMod21Beta,defMod22Beta,defMod31Beta,defMod32Beta,
+               betaModFull1,betaModFull2)
+} 
+if (length(modvarsBetamachine) == 4) {
+  betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B + pMod3B*dMod31B + pMod4B*dMod41B, name = "betaMod1")
+  betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B + pMod3B*dMod32B + pMod4B*dMod42B, name = "betaMod2")
+  Betamodpars <- c(pathMod1Beta,pathMod2Beta,pathMod3Beta,pathMod4Beta,
+               defMod11Beta,defMod12Beta,defMod21Beta,defMod22Beta,defMod31Beta,defMod32Beta,defMod41Beta,defMod42Beta,
+               betaModFull1,betaModFull2)
+} 
+if (length(modvarsBetamachine) == 5) {
+  betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B + pMod3B*dMod31B + pMod4B*dMod41B + pMod5B*dMod51B, name = "betaMod1")
+  betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B + pMod3B*dMod32B + pMod4B*dMod42B + pMod5B*dMod52B, name = "betaMod2")
+  Betamodpars <- c(pathMod1Beta,pathMod2Beta,pathMod3Beta,pathMod4Beta,pathMod5Beta,
+               defMod11Beta,defMod12Beta,defMod21Beta,defMod22Beta,defMod31Beta,defMod32Beta,defMod41Beta,defMod42Beta,defMod51Beta,defMod52Beta,
+               betaModFull1,betaModFull2)
+}
+pathMan <- mxAlgebra(expression = rbind(cbind(betaMod1,pZ),
+                                              cbind(pZ,betaMod2)), name = "pM")
+}

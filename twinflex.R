@@ -459,10 +459,7 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
-} #else {
-#pathCov <- mxMatrix(type = "Full", nrow = 0, ncol = 0, byrow = FALSE,
-#                            name = "pCov")  
-#}
+} 
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
