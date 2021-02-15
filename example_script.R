@@ -49,10 +49,12 @@ ace_biv_c_umx <- umxACE(selDVs = c("wt","ht"),sep = "",mzData = mz, dzData = dz)
 summary(ace_biv_c_twinflex)
 summary(ace_biv_c_umx) 
 
+# model with covariate as definition variable
+twinData1 <- twinData %>% filter(!is.na(ht1) & !is.na(ht2))
+ace_unicov_def_c_twinflex <- twinflex(acevars = "wt",covvars = "ht",covariance = FALSE, data = twinData1,sep = "",zyg = "zyg_r")
+# model with covariate in covariance matrix
+ace_unicov_cov_c_twinflex <- twinflex(acevars = "wt",covvars = "ht",covariance = TRUE, data = twinData,sep = "",zyg = "zyg_r")
 
-
-
-
-
-
+summary(ace_unicov_def_c_twinflex)
+summary(ace_unicov_cov_c_twinflex)
 

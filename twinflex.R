@@ -373,7 +373,12 @@ print(summary(dzData))
 nv <- length(acevars) # Vars per twin
 ntv <- nv*2 # Vars per twin pair
 m <- (nv*2) # Decomposed manifest variables
+if (covariance == TRUE) {
 c <- length(covvarsall) # Control variables 
+}
+if (covariance == FALSE) {
+  c <- 0
+}
 l <- 3*nv*2
 t <- m+l+c
 
@@ -459,7 +464,9 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             values = pathCovvalue,
                             labels = pathCovlabel,
                             name = "pCov")
-} 
+}
+
+
 mat <- matrix(0.3,nrow = nv,ncol = nv)
 mat
 freepathAC <- lower.tri(mat, diag = TRUE)
@@ -515,12 +522,12 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   labels = pathElabel,
                   name = "e")  
 }
-pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
+  pathBottom <- mxMatrix(type = "Zero", nrow = l+c, ncol = t, name = "Bottom")
 if (!is.null(covvars) & covariance == TRUE) {
 pathMan <- mxAlgebra(expression = cbind(rbind(cbind(b,pZ),
                                               cbind(pZ,b)),pCov), name = "pM")
 }
-if (is.null(covvars)) {
+if (is.null(covvars) | covariance == FALSE) {
 pathMan <- mxAlgebra(expression = rbind(cbind(b,pZ),
                                               cbind(pZ,b)), name = "pM")    
 }
@@ -564,7 +571,7 @@ if (!isSymmetric(svS)) {
 svS[upper.tri(svS)] <- t(svS)[upper.tri(svS)]
 }
 
-if (!is.null(covvars)) {
+if (!is.null(covvars) & covariance == TRUE) {
 covCovariates <- mxMatrix(type = "Symm", nrow = c, ncol = c, byrow = FALSE,
                  values = svS,
                  lbound = lowerboundcovmat(c), 
@@ -578,7 +585,7 @@ matSMan <- mxAlgebra(expression = rbind(cbind(cMan,cManCov),
                                         cbind(t(cManCov),cCov),
                                         t(cManCovACE)), name = "matSM")
 } 
-if (is.null(covvars)) {
+if (is.null(covvars) | covariance == FALSE) {
 covCovariates <- NULL
 covManCov <- NULL
 covMan <- mxMatrix(type = "Zero", nrow = m, ncol = m, name = "cMan")
@@ -605,6 +612,7 @@ matSDZ <- mxAlgebra(expression = cbind(matSM,rbind(cManCovACE,
 
 filterI <- mxMatrix(type = "Iden", nrow = m+c, ncol = m+c, name = "FI")
 filterZ <- mxMatrix(type = "Zero", nrow = m+c, ncol = l, name = "FZ")
+
 matF <- mxAlgebra(expression = cbind(FI,FZ), name = "Filter")
 
 matI <- mxMatrix(type = "Iden", nrow = t, ncol = t, name = "I")
@@ -627,7 +635,7 @@ matM <- mxMatrix(type = "Full", nrow = t, ncol = 1,
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
 }
 
-if (covariance == FALSE & !is.null(covvars)) {
+if (covariance == FALSE) {
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(acevarswide, split=sep, fixed=TRUE), function(x) (x[1])))))
 meanacelabel <- paste0("mean",c(paste0("A_",acevars1),paste0("C_",acevars1),paste0("E_",acevars1),paste0("A_",acevars2),paste0("C_",acevars2),paste0("E_",acevars2)))
 meanlabel <- c(meanmanifestlabel,meanacelabel)
@@ -638,12 +646,13 @@ matM <- mxMatrix(type = "Full", nrow = m+l, ncol = 1,
                  name = "M") 
 }
 
-if (!is.null(ordinal) & (2 %in% ordinallength)) {
+if (!is.null(ordinal)) {
+  if (2 %in% ordinallength) {
 binarytrue <- nTh == 1
 binaryvar <- ordinalwide[binarytrue]
 binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
 binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
-if (covariance == TRUE) {
+if (covariance == TRUE) { # covariates in model with binary vars with covariance = TRUE
 binaryflag <- c(binaryace,binaryrest)
 svmean_manifests <- binaryflag == FALSE
 matM <- mxMatrix(type = "Full", nrow = t, ncol = 1, 
@@ -653,7 +662,7 @@ matM <- mxMatrix(type = "Full", nrow = t, ncol = 1,
                  name = "M")
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%M), name = "expMean")
 }
-if (covariance == FALSE & !is.null(covvars)) {
+if (covariance == FALSE) { # covariates in model with binary vars with covariance = FALSE
 binaryflag <- binaryace
 svmean_manifests <- binaryflag == FALSE
 meanmanifestlabel <- c(paste0("mean_",unlist(sapply(strsplit(acevarswide, split=sep, fixed=TRUE), function(x) (x[1])))))
@@ -666,8 +675,10 @@ matM <- mxMatrix(type = "Full", nrow = m+l, ncol = 1,
                  name = "M") 
 }
 }
+}
 
-if (covariance == TRUE) {
+if (covariance == FALSE) {
+  c <- length(covvarsall)
 # matrix with effect sizes of moderation of the means stored in M
 pathCov <- mxMatrix(type = "Full", nrow = c, ncol = ntv, byrow = FALSE,
                             free = t(pathCovfree),
@@ -677,28 +688,28 @@ pathCov <- mxMatrix(type = "Full", nrow = c, ncol = ntv, byrow = FALSE,
 
 # Matrix of definition variables for mean moderation
 labeldef <- paste0("data",".",covvarsall)
-defM      <- mxMatrix( type="Full", nrow=1, ncol=c, free=FALSE, labels=labeldef, name="defM" )
+defCovMean      <- mxMatrix( type="Full", nrow=1, ncol=c, free=FALSE, labels=labeldef, name="defM" )
 
 # Matrix effects on means
 effMean <- mxAlgebra(expression = defM%*%pCov, name = "effM")
 
 # Vector of latent variables (all set to zero) just need to concatenate them to the manifests to get the dimensions right
-latentmeans <- mxMatrix(type = "Full", nrow = l, ncol = 1, name = "lmeans")
+latentmeans <- mxMatrix(type = "Full", nrow = 1, ncol = l, name = "lmeans")
 
 # Concatenate the manifest with the latent means vector
 effMeanFull <- mxAlgebra(expression = cbind(effM,lmeans), name = "effMFull")
 
 # Matrix of moderated means
-modMean <- mxAlgebra(expression =M+effMFull, name = "modM")
+modMean <- mxAlgebra(expression =M+t(effMFull), name = "modM")
 
 # Matrix of expected means
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%modM), name = "expMean")
 }
 
-
 # Define data object
 dataMZ    <- mxData(observed=mzData, type="raw")
 dataDZ    <- mxData(observed=dzData, type="raw")
+
 
 # Variance constraint for binary variables
 if (!is.null(ordinal)) {
@@ -730,6 +741,9 @@ var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1"
 binary <- c(filtermatbin,binarycov,one,var1)
 }
 }
+if (covariance == FALSE) {
+  variables <- c(acevarswide)
+}
 # Define expectation objects 
 if (!is.null(ordinal)) {
 expMZ     <- mxExpectationNormal(covariance="expCovMZ", means="expMean", thresholds = "threG", threshnames = ordinalwide,
@@ -747,7 +761,7 @@ expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean",
 fitfun     <- mxFitFunctionML()
 
 # parameters
-pars      <- list(pathB, pathA, pathC, pathE,pathCov, pathZ, matA, pathMan, pathACE,
+pars      <- list(pathB, pathA, pathC, pathE, pathZ, matA, pathMan, pathACE,
                   covCovariates, covMan, covManCov, covManCovACE, covV,matSMan,
                   filterI, filterZ, matF, matI,
                   matM, mean, pathBottom)
@@ -755,25 +769,36 @@ if (!is.null(ordinal)) {
 pars <- c(pars,c(thinG,inc,threG))
 }
 
-if (covariance == FALSE & !is.null(covvars)) {
-covmeanpars <- c(defM,effMean,latentmeans,effMeanFull,modMean)  
+if (!is.null(covariance)) {
+if (covariance == FALSE) {
+covmeanpars <- c(effMean,latentmeans,effMeanFull,modMean,pathCov)  
 pars <- c(pars,covmeanpars)
+}
+if (covariance == TRUE) {
+pars <- c(pars,pathCov)
+}
 }
 
 
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="DZ")
+
 if (!is.null(ordinal)) {
 if (2 %in% ordinallength) {
   modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,name="DZ")
 }
 }
+if (covariance == FALSE & !is.null(covariance)) {
+  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, defCovMean,name="MZ")
+modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,defCovMean,name="DZ")
+
+}
 multi     <- mxFitFunctionMultigroup(c("MZ","DZ"))
 
 # overall model object
-modelACE  <- mxModel("ACE", pars, modelMZ, modelDZ, multi)
+modelACE  <- mxModel("ACE",  modelMZ, modelDZ, multi)
 # run model
 
 if (is.null(optimizer) & is.null(ordinal)) {

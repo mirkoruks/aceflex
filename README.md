@@ -1,6 +1,6 @@
 # twinflex
 
-## Some genereal remarks
+## Some general remarks
 - Here, I confine myself to explain the aims and elements of the function on a very basic level. If you want more information, please write me a mail or find a more detailed explanation [here](https://mirkoruks.github.io/) soon.
 - It's still a **beta version**. So if you find some bugs - I am sure they exist - or have any comments, questions or suggestions, I am happy if you send me a mail to mirko.ruks@uni-bielefeld.de
 
