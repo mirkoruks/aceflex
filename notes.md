@@ -1,5 +1,5 @@
 # to be added:
-## the cogs and wheels of the moderation
+## with respect to the working the moderation
 - make sure to calculate the variance constraint for binary variables only with the unmoderated paths so that it also applies to the case with moderated paths and fixes the variance of the trait to 1 given a moderator value of 0
 - if the moderator has within-pair variance and is not included in the covariance matrix as a ACE variable, make sure that twinflex calculates a extended univariate moderation model as suggested by van der Sluis et al. 2011
 
