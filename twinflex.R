@@ -737,23 +737,27 @@ if (moderation == TRUE & (!is.null(modACEbiv) | Betamoderation == TRUE)) {
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
+                  lbound = pathACElb,
                   labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
+                  lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
                   values = valuespathE,
+                  lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")
 } else if (type == "chol") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathAC,
                   values = valuespathAC,
+                  lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")  
 }
@@ -995,6 +999,8 @@ modacepars <- c(pathMod1a,pathMod2a,pathMod3a,pathMod4a,pathMod5a,pathMod1c,path
 
 pathACE <- mxAlgebra(expression = rbind(cbind(aMod1,cMod1,eMod1,pZ,pZ,pZ),
                                         cbind(pZ,pZ,pZ,aMod2,cMod2,eMod2)), name = "pACE")
+pathACEnoMod <- mxAlgebra(expression = rbind(cbind(a,c,e,pZ,pZ,pZ),
+                                        cbind(pZ,pZ,pZ,a,c,e)), name = "pACEnM")
 }
 
 
@@ -1130,6 +1136,8 @@ modbetapars <- c(pathMod1Beta,pathMod2Beta,pathMod3Beta,pathMod4Beta,pathMod5Bet
 
 pathMan <- mxAlgebra(expression = rbind(cbind(betaMod1,pZ),
                                               cbind(pZ,betaMod2)), name = "pM")
+pathMannoMod <- mxAlgebra(expression = rbind(cbind(beta,pZ),
+                                              cbind(pZ,beta)), name = "pMnM")
 }
 }
 
@@ -1137,6 +1145,22 @@ pathMan <- mxAlgebra(expression = rbind(cbind(betaMod1,pZ),
 matA <- mxAlgebra(expression = rbind(cbind(pM,pACE),
                                      Bottom),
                   name = "A")
+
+if (moderation == TRUE) {
+if (ACEmoderation == TRUE & Betamoderation == TRUE) {
+matAnoMod <- mxAlgebra(expression = rbind(cbind(pMnM,pACEnM),
+                                          Bottom),name = "AnM")
+modbinconstrpars <- c(pathACEnoMod,pathMannoMod,matAnoMod)
+} else if (ACEmoderation == TRUE & Betamoderation == FALSE) {
+matAnoMod <- mxAlgebra(expression = rbind(cbind(pM,pACEnM),
+                                          Bottom),name = "AnM")
+modbinconstrpars <- c(pathACEnoMod,matAnoMod)
+} else if (ACEmoderation == FALSE & Betamoderation == TRUE) {
+matAnoMod <- mxAlgebra(expression = rbind(cbind(pMnM,pACE),
+                                          Bottom),name = "AnM")
+modbinconstrpars <- c(pathMannoMod,matAnoMod)
+}
+}
 
 ###############################################################################
 ###############################################################################
@@ -1247,6 +1271,10 @@ covMZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SMZ%*%t(solve(I-A))%*%t(Fi
 # The expected covariance matrix for the DZ twins
 covDZ <- mxAlgebra(expression = Filter%*%solve(I-A)%*%SDZ%*%t(solve(I-A))%*%t(Filter), name = "expCovDZ")
 
+if (moderation == TRUE) {
+covMZnoMod <- mxAlgebra(expression = Filter%*%solve(I-AnM)%*%SMZ%*%t(solve(I-AnM))%*%t(Filter), name = "expCovMZnMod")
+modbinconstrpars <- c(modbinconstrpars,covMZnoMod)
+}
 
 ###############################################################################
 ###############################################################################
@@ -1288,6 +1316,7 @@ if (!is.null(ordinal)) {
 binarytrue <- nTh == 1
 binaryvar <- ordinalwide[binarytrue]
 binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
+print(binaryace)
 binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
       # If there are binary vars + covariates in covariance matrix: Define matrix of unmoderated Means ("M") and matrix of expected means ("expMean")
 if (covariance == TRUE) { # covariates in model with binary vars with covariance = TRUE
@@ -1519,7 +1548,11 @@ if (2 %in% ordinallength) {
 # fixed variances
 # 2 are binary (1st and 3rd)  
   # No of rows = no of binary vars
+binaryflag <- c(binaryflag[1:length(acevars)],rep(FALSE,length(acevars)))
 nrowfilterbinary <- sum(binaryflag)
+print("HERE")
+print(binaryflag)
+print(nrowfilterbinary)
   # No of cols = vars in total
 ncolsfilterbinary <- length(variables)
   # 1 if var = binary and 0 if not
@@ -1534,13 +1567,23 @@ valfilterbinary <- binaryflag
 valfilterbinary[valfilterbinary== TRUE] <- 1
 flag <- which(valfilterbinary == 1)
 filtermatvalues <- matrix(unlist(lapply(flag, bfilter, vec = valfilterbinary)),nrow = nrowfilterbinary, ncol = length(valfilterbinary), byrow = TRUE)
-
+print("lala")
+print(filtermatvalues)
 filtermatbin <- mxMatrix(type = "Full", values = filtermatvalues, name = "fmatbin")
+print(filtermatbin)
 binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZ %*% t(fmatbin), name = "binCov")
 
+if (moderation == TRUE) {
+binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZnMod %*% t(fmatbin), name = "binCov") 
+}
+
 one <- mxMatrix(type = "Unit", nrow = nrowfilterbinary, ncol = 1, name = "Unit")
+print(one)
 var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1")
 binary <- c(filtermatbin,binarycov,one,var1)
+if (moderation == TRUE) {
+binary <- c(binary,modbinconstrpars)  
+}
 }
 }
 if (covariance == FALSE) {
@@ -1645,12 +1688,9 @@ modelACE  <- mxModel("ACE",  modelMZ, modelDZ, multi)
 #stop("Stop!")
 #}
 
-if (is.null(optimizer) & is.null(ordinal)) {
+if (is.null(optimizer)) {
 mxOption(NULL , 'Default optimizer' , 'SLSQP')
 } 
-else if (is.null(optimizer) & !is.null(ordinal)) {
-mxOption(NULL , 'Default optimizer' , 'CSOLNP')   
-}
 else if (optimizer == "SLSQP") {
 mxOption(NULL , 'Default optimizer' , 'SLSQP')    
 }

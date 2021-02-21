@@ -58,7 +58,6 @@ twinDataGxE2 <- GxE %>% filter(!is.na(wt1) & !is.na(wt2))
 
 # univariate continuous (Weight)
     # twinflex
-ace_uni_c_twinflex <- twinflex(acevars = "wt",data = twinData,sep = "",zyg = "zyg_r")
     # umx
 ace_uni_c_umx <- umxACE(selDVs = "wt",sep = "",mzData = mz, dzData = dz)
 
