@@ -101,17 +101,32 @@ summary(umx_bi_bb)         # -2LL = 6529.205
 # univariate GxE with constant moderator and continuous DV
     # twinflex
 gxe1 <- data_orig %>% filter(!is.na(age))
-tf_modu_c <- twinflex(acevars = c("posbez"),data = gxe1,sep = "_",zyg = "zyg", modACEuniv = "posbez BY age") ## works fine
+tf_modu_c <- twinflex(acevars = c("posbez"),data = gxe1,sep = "_",zyg = "zyg", modACEuniv = "posbez BY age", tryHard = TRUE) ## works fine
     # umx
 mzgxe1 <- mz_data %>% filter(!is.na(age)) %>% mutate(age_1 = age) %>% mutate(age_2 = age) %>% select(posbez_1,posbez_2,age_1,age_2) 
 dzgxe1 <- dz_data %>% filter(!is.na(age)) %>% mutate(age_1 = age) %>% mutate(age_2 = age) %>% select(posbez_1,posbez_2,age_1,age_2) 
-umx_modu_c <- umxGxE(selDVs = c("posbez"), selDefs = "age",dzData = dzgxe1, mzData = mzgxe1, sep = "_", lboundACE = 1e-04)
+umx_modu_c <- umxGxE(selDVs = c("posbez"), selDefs = "age",dzData = dzgxe1, mzData = mzgxe1, sep = "_", lboundACE = 1e-04, tryHard = "search")
 umx_modu_c <- umxModify(umx_modu_c, update = "quad11")
     # comparison
 tf_modu_c[["ModelSummary"]] # -2LL = 8575.396
 summary(umx_modu_c)         # -2LL = 8575.396
 
-# univariate ACE model with continuous DV and covariate in covariance matrix
+# bivariate GxE
+    # twinflex
+gxe2 <- data_orig %>% filter(!is.na(posbez_1) & !is.na(posbez_2))
+tf_modb_c <- twinflex(acevars = c("posbez","negbez"),data = gxe2,sep = "_",zyg = "zyg", modACEuniv = "negbez BY posbez",modACEbiv = "posbez -> negbez BY posbez") ## works fine
+    # umx
+mzgxe2 <- mz_data %>% filter(!is.na(posbez_1) & !is.na(posbez_2)) %>% select(posbez_1,posbez_2,negbez_1,negbez_2) 
+dzgxe2 <- dz_data %>% filter(!is.na(posbez_1) & !is.na(posbez_2)) %>% select(posbez_1,posbez_2,negbez_1,negbez_2) 
+umx_modu_c <- umxGxEbiv(selDVs = c("negbez"), selDefs = "posbez",dzData = dzgxe2, mzData = mzgxe2, sep = "_")
+    # comparison
+tf_modu_c[["ModelSummary"]] # -2LL = 16922.94
+summary(umx_modu_c)         # -2LL = 18586.38
+
+
+
+
+
     # twinflex
 tf_uni_c_cc <- twinflex(acevars = "posbez",covvars = "iseiempmean",data = data_orig,sep = "_",zyg = "zyg") ## works fine
     # umx
