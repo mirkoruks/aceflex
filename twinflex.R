@@ -1,4 +1,4 @@
-twinflex <- function(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, type = "chol", modACEuniv = NULL, modACEbiv = NULL, modBeta = NULL) {
+twinflex <- function(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, exh = FALSE, tries = 10, type = "chol", modACEuniv = NULL, modACEbiv = NULL, modBeta = NULL) {
 
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
@@ -1708,11 +1708,13 @@ if (tryHard == FALSE){
 }
 
 if (tryHard == TRUE){
+
 if (!is.null(ordinal)) {
-fitACE    <- mxTryHardOrdinal(modelACE, extraTries = 10, exhaustive = FALSE)
+fitACE    <- mxTryHardOrdinal(modelACE, extraTries = tries, exhaustive = exh)
+
 }
 if (is.null(ordinal)) {
-fitACE    <- mxTryHard(modelACE, extraTries = 10, exhaustive = FALSE)
+fitACE    <- mxTryHard(modelACE, extraTries = tries, exhaustive = exh)
 }
 }
 sumACE <- summary(fitACE)
