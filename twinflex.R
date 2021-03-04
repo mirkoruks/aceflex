@@ -727,6 +727,7 @@ pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
+print(pathC)
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   free = freepathE,
@@ -743,7 +744,7 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   name = "e")  
 }
 }
-
+print(pathE)
 # ACE paths without constraints if there is a bivariate moderation of ace or beta paths 
 if (moderation == TRUE & (!is.null(modACEbiv) | Betamoderation == TRUE)) {
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
