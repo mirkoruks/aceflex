@@ -180,7 +180,11 @@ moderatorunivACE[[i]] <- varsACEuniv[[i]][2:length(varsACEuniv[[i]])] # save mod
 }
 
 modvarsACEuniv <- unique(unlist(moderatorunivACE))
-
+print("Hier")
+print(moderatedunivACE)
+if (!(moderatedunivACE %in% acevars)) {
+  stop("Some of the moderated variables provided in modACEuniv argument are missing in the acevars argument!")
+}
   }
 if (is.null(modACEuniv)) {
 modvarsACEuniv <- NULL
@@ -198,6 +202,9 @@ moderatedbivACE[[i]] <- varsACEbiv[[i]][1:2] # save moderated vars
 moderatorbivACE[[i]] <- varsACEbiv[[i]][3:length(varsACEbiv[[i]])] # save moderators
 }
 modvarsACEbiv <- unique(unlist(moderatorbivACE))
+if (!(moderatedbivACE %in% acevars)) {
+  stop("Some of the moderated variables provided in modACEbiv argument are missing in the acevars argument!")
+}
     }
   if (is.null(modACEbiv)) {
     modvarsACEbiv <- NULL
@@ -220,6 +227,9 @@ moderatedBeta
 moderatorBeta
 modvarsBeta <- unique(unlist(moderatorBeta))
 modvarsBeta
+if (!(moderatedBeta %in% acevars)) {
+  stop("Some of the moderated variables provided in modbeta argument are missing in the acevars argument!")
+}
 }
 if (Betamoderation == FALSE) {
   modvarsBeta <- NULL
@@ -333,6 +343,8 @@ modvarslegend <- modvarslegend[,c(2,1,3:ncol(modvarslegend))]
 modvarslegend <- modvarslegend[order(modvarslegend$modvarsmachine),]
 modvarslegend
 print(modvarslegend)
+print("lalalala")
+
 # Check if moderator variables are in data frame
 moderatorvars <- modvarslegend[modvarslegend$modvarsuser != "NA","modvarsuser"]
 moderatorvars1 <-    paste0(moderatorvars,sep,"1") 
@@ -830,6 +842,7 @@ modvarsACEusernotwide <- NULL
 
 print(modvarsACEuser)
 print(modACElong)
+print("LALALALAALA")
 
 
 
@@ -873,10 +886,11 @@ if (is.null(modACEbiv)) {
 }
 print(varsACEuniv)
 print(varsACEbiv)
-
+print("TESTESTEST")
 # create list that indexes free and fixed interaction effects
 freeModACE <- list(pathModACEfree,pathModACEfree,pathModACEfree,pathModACEfree,pathModACEfree)
 names(freeModACE) <- modvarsmachine
+print(freeModACE)
     # Univariate ACE interaction effects
 if (!is.null(modACEuniv)) {
 for (j in 1:length(modvarsACEmachine)) {
@@ -889,7 +903,7 @@ freeModACE[[index]][as.vector(i)[1],as.vector(i)[1]] <- TRUE
 }
 }
 } 
-
+print(freeModACE)
   # Bivariate ACE interaction effects
 if (!is.null(modACEbiv)) {
 for (j in 1:length(modvarsACEmachine)) {

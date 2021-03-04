@@ -102,6 +102,11 @@ summary(umx_bi_bb)         # -2LL = 6529.205
     # twinflex
 gxe1 <- data_orig %>% filter(!is.na(age))
 tf_modu_c <- twinflex(acevars = c("posbez"),data = gxe1,sep = "_",zyg = "zyg", modACEuniv = "posbez BY age", tryHard = TRUE) ## works fine
+gxe11 <- data_orig %>% filter(!is.na(posbez_1) & !is.na(posbez_2))
+gxe11$posbez_1 <- scale(gxe11$posbez_1)
+gxe11$posbez_2 <- scale(gxe11$posbez_2)
+selfmod <- twinflex(acevars = c("posbez"),data = gxe11,sep = "_",zyg = "zyg", modACEuniv = "posbez BY posbez", tryHard = TRUE, exh = FALSE) ## works fine
+selfmod[["ModelSummary"]]
     # umx
 mzgxe1 <- mz_data %>% filter(!is.na(age)) %>% mutate(age_1 = age) %>% mutate(age_2 = age) %>% select(posbez_1,posbez_2,age_1,age_2) 
 dzgxe1 <- dz_data %>% filter(!is.na(age)) %>% mutate(age_1 = age) %>% mutate(age_2 = age) %>% select(posbez_1,posbez_2,age_1,age_2) 
