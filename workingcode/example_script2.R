@@ -133,9 +133,12 @@ summary(umx_modu_c)         # -2LL = 18586.38
 
 
     # twinflex
-tf_uni_c_cc <- twinflex(acevars = "posbez",covvars = "iseiempmean",data = data_orig,sep = "_",zyg = "zyg") ## works fine
+source("C:/Users/Besitzer/Documents/Arbeit/Twinlife/twinflex/Git/twinflex.R")
+tf_uni_c_cc <- twinflex(acevars = c("posbez","negbez"),covvars = c("age","iseiempmean"),
+                        data = data_orig,sep = "_",
+                        zyg = "zyg", tryHard = TRUE) ## works fine
     # umx
-umx_uni_c_cc <- umxACEcov(selDVs = "posbez", selCovs = "iseiempmean", dzData = dz_data, mzData = mz_data, sep = "_")
+umx_uni_c_cc <- umxACEcov(selDVs = "posbez", selCovs = c("iseiempmean", dzData = dz_data, mzData = mz_data, sep = "_")
     # comparison ACE estimates identical despite minor differences in parametrization
 tf_uni_c_cc[["ModelSummary"]] # -2LL = 27529.93
 summary(umx_uni_c_cc) # 27530.6
