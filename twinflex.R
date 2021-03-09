@@ -182,7 +182,7 @@ moderatorunivACE[[i]] <- varsACEuniv[[i]][2:length(varsACEuniv[[i]])] # save mod
 modvarsACEuniv <- unique(unlist(moderatorunivACE))
 print("Hier")
 print(moderatedunivACE)
-if (!(moderatedunivACE %in% acevars)) {
+if (!(all(unlist(moderatedunivACE) %in% acevars))) {
   stop("Some of the moderated variables provided in modACEuniv argument are missing in the acevars argument!")
 }
   }
@@ -202,7 +202,11 @@ moderatedbivACE[[i]] <- varsACEbiv[[i]][1:2] # save moderated vars
 moderatorbivACE[[i]] <- varsACEbiv[[i]][3:length(varsACEbiv[[i]])] # save moderators
 }
 modvarsACEbiv <- unique(unlist(moderatorbivACE))
-if (!(moderatedbivACE %in% acevars)) {
+print("Hier")
+print(unlist(moderatedbivACE))
+print(acevars)
+
+if (!(all(unlist(moderatedbivACE) %in% acevars))) {
   stop("Some of the moderated variables provided in modACEbiv argument are missing in the acevars argument!")
 }
     }
@@ -227,7 +231,7 @@ moderatedBeta
 moderatorBeta
 modvarsBeta <- unique(unlist(moderatorBeta))
 modvarsBeta
-if (!(moderatedBeta %in% acevars)) {
+if (!(all(unlist(moderatedBeta) %in% acevars))) {
   stop("Some of the moderated variables provided in modbeta argument are missing in the acevars argument!")
 }
 }
@@ -351,14 +355,20 @@ moderatorvars1 <-    paste0(moderatorvars,sep,"1")
 moderatorvars2 <-    paste0(moderatorvars,sep,"2") 
 moderatorvarswide <- c(moderatorvars1, moderatorvars2)
 moderatorvarsnotwide <- unlist(lapply(moderatorvarswide, existence))
+print("A")
 print(moderatorvarsnotwide)
 moderatorvarswide <- moderatorvarswide[!moderatorvarswide %in% moderatorvarsnotwide]
 if (!is.null(moderatorvarsnotwide)) {
-moderatorvarsnotwide <- unique(sapply(strsplit(moderatorvarsnotwide, split = c(paste0(sep,1),paste0(sep,2)), fixed = TRUE), function(x) (x[1])))
+  splitvec <- paste0("\\",sep,1,"|","\\",sep,"2")
+moderatorvarsnotwide <- unique(sapply(strsplit(moderatorvarsnotwide, split = splitvec), function(x) (x[1])))
 } else {
 moderatorvarsnotwide <- NULL
 }
+print("B")
+print(moderatorvarsnotwide)
 moderatorvarsnotfound <- unlist(lapply(moderatorvarsnotwide, existence))
+print("C")
+print(moderatorvarsnotfound)
 existenceerror(moderatorvarsnotfound)
 moderatorvars <- c(moderatorvarswide,moderatorvarsnotwide)
 print(moderatorvars)
@@ -744,7 +754,7 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
                   name = "e")  
 }
 }
-print(pathE)
+
 # ACE paths without constraints if there is a bivariate moderation of ace or beta paths 
 if (moderation == TRUE & (!is.null(modACEbiv) | Betamoderation == TRUE)) {
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
@@ -829,7 +839,8 @@ modvarsACEuserwide <- c(modvarsACEuser1, modvarsACEuser2)
 modvarsACEusernotwide <- unlist(lapply(modvarsACEuserwide, existence))
 modACElong <- rep(FALSE,length(modvarsACEuser))
 if (!is.null(modvarsACEusernotwide)) {
-modvarsACEusernotwide <- unique(sapply(strsplit(modvarsACEusernotwide, split = c(paste0(sep,1),paste0(sep,2)), fixed = TRUE), function(x) (x[1])))
+  splitvec <- paste0("\\",sep,1,"|","\\",sep,"2")
+modvarsACEusernotwide <- unique(sapply(strsplit(modvarsACEusernotwide, split = splitvec), function(x) (x[1])))
 for (i in 1:length(modvarsACEuser)) {
   for (j in 1:length(modvarsACEusernotwide)) {
     if (modvarsACEuser[i]==modvarsACEusernotwide[j]) {
@@ -840,12 +851,6 @@ for (i in 1:length(modvarsACEuser)) {
 } else {
 modvarsACEusernotwide <- NULL
 }
-
-print(modvarsACEuser)
-print(modACElong)
-print("LALALALAALA")
-
-
 
 ###############################################################################
 # Create matrix of interaction effects
@@ -885,13 +890,10 @@ if (is.null(modACEbiv)) {
   varsACEbiv <- NULL
 
 }
-print(varsACEuniv)
-print(varsACEbiv)
-print("TESTESTEST")
+
 # create list that indexes free and fixed interaction effects
 freeModACE <- list(pathModACEfree,pathModACEfree,pathModACEfree,pathModACEfree,pathModACEfree)
 names(freeModACE) <- modvarsmachine
-print(freeModACE)
     # Univariate ACE interaction effects
 if (!is.null(modACEuniv)) {
 for (j in 1:length(modvarsACEmachine)) {
@@ -904,14 +906,12 @@ freeModACE[[index]][as.vector(i)[1],as.vector(i)[1]] <- TRUE
 }
 }
 } 
-print(freeModACE)
   # Bivariate ACE interaction effects
 if (!is.null(modACEbiv)) {
 for (j in 1:length(modvarsACEmachine)) {
 for (i in varsACEbiv) {
 if (modvarsACEmachine[j] %in% i) {
 index <- modvarsACEmachine[j]
-print(as.vector(i)[2])
 if (!is.null(freeModACE[[index]])) {
 freeModACE[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
 }
@@ -1036,7 +1036,8 @@ modvarsBetauser2 <-    paste0(modvarsBetauser,sep,"2") # Covariates twin 2
 modvarsBetauserwide <- c(modvarsBetauser1, modvarsBetauser2)
 
 modvarsBetausernotwide <- unlist(lapply(modvarsBetauserwide, existence))
-modvarsBetausernotwide <- unique(sapply(strsplit(modvarsBetausernotwide, split = c(paste0(sep,1),paste0(sep,2)), fixed = TRUE), function(x) (x[1])))
+splitvec <- paste0("\\",sep,1,"|","\\",sep,"2")
+modvarsBetausernotwide <- unique(sapply(strsplit(modvarsBetausernotwide, split = splitvec), function(x) (x[1])))
 
 modBetalong <- rep(FALSE,length(modvarsBetauser))
 
@@ -1059,7 +1060,6 @@ modBetalong
 for (i in 1:length(modvarsBetauser)) {
 varsBeta <- lapply(varsBeta,gsub, pattern = modvarsBetauser[i], replacement = modvarsBetamachine[i])
 }
-print(varsBeta)
 
 # create list that indexes free and fixed interaction effects
 freeModBeta <- list(pathModBetafree,pathModBetafree,pathModBetafree,pathModBetafree,pathModBetafree)
@@ -1069,7 +1069,6 @@ freevector <- pathModBetafree
 for (i in varsBeta) {
 if (modvarsBetamachine[j] %in% i) {
 index <- modvarsBetamachine[j]
-print(index)
 freeModBeta[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
 }
 }
@@ -1087,7 +1086,7 @@ labelBeta[[paste0("Mod",j)]] <-pathBlabel
 # create list that stores matrices of interaction effects
 pathModBetaStore <- list()
 for (i in names(freeModBeta)) {
-  print(freeModBeta[[i]])
+
   index <- paste0("path",i,"Beta")
   name <- paste0("p",i,"B")
 matrixstore <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE, 
@@ -1331,7 +1330,6 @@ if (!is.null(ordinal)) {
 binarytrue <- nTh == 1
 binaryvar <- ordinalwide[binarytrue]
 binaryace <- unlist(lapply(acevarswide,checkcorrespondence, check = binaryvar))
-print(binaryace)
 binaryrest <- rep(FALSE,(length(variables)-length(acevarswide)))
       # If there are binary vars + covariates in covariance matrix: Define matrix of unmoderated Means ("M") and matrix of expected means ("expMean")
 if (covariance == TRUE) { # covariates in model with binary vars with covariance = TRUE
@@ -1436,7 +1434,8 @@ if (nv > 1) {
     modmeanfree <- modmeanfree[1:5,1:nv]
     row.names(modmeanfree) <- modvarslegend$modvarsmachine
 }
-
+print("Moderatoren Legende")
+print(modvarslegend)
 for (i in 1:(dim(modvarslegend)[1])) {
 for (j in acevars) {
   if (!is.null(modACEuniv)) {
@@ -1452,12 +1451,12 @@ for (j in acevars) {
   }
   if (!is.null(modACEbiv)) {
   if (grepl(j,modvarslegend[i,"avbiv"])) {
-    print(modvarslegend[i,"avbiv"])
     modmeanfree[paste0("Mod",i),j] <- TRUE
     row.names(modmeanfree) <- modvarslegend$modvarsuser
   if (rownames(modmeanfree)[i] %in% acevars) {  
 #  if (rownames(modmeanfree)[i] == j) {
     modmeanfree[i,] <- FALSE
+    print("Hier gehts")
   }
     row.names(modmeanfree) <- modvarslegend$modvarsmachine
   }
@@ -1475,7 +1474,8 @@ if (Betamoderation == TRUE) {
 }
 }
 }
-modmeanfree
+print("GUCK HIERHIN!")
+print(modmeanfree)
 modvarslegend
 
 modmeanfree <- cbind(modmeanfree,modmeanfree)
@@ -1499,7 +1499,6 @@ labeldefMModean <- NULL
 modvarslegend[is.na(modvarslegend)] <- "NA"
 # Matrix of definition variables for mean moderation
 for (i in 1:length(modvarsmachine)) {
-  print(i)
 if (ACEmoderation == TRUE) {
 if (modvarslegend$modACElong[i]== "FALSE") {  # wide-formatted moderators
 l1 <- paste0("data.",modvarslegend$modvarsuser[i],sep,"1")
@@ -1536,7 +1535,7 @@ defMModean      <- mxMatrix( type="Full", nrow=1, ncol=10, free=FALSE, labels=la
 effMModean <- mxAlgebra(expression = defMMod%*%pMMod, name = "effMMod")
 
 # Vector of latent variables (all set to zero) just need to concatenate them to the manifests to get the dimensions right
-latmodmeans <- mxMatrix(type = "Full", nrow = 1, ncol = c+l, name = "lmodmeans") # theoretisch müssten Kovariate in der Kovarianzmatrix möglich sein, daher das c
+latmodmeans <- mxMatrix(type = "Full", nrow = 1, ncol = c+l, name = "lmodmeans") # theoretisch m?ssten Kovariate in der Kovarianzmatrix m?glich sein, daher das c
 
 # Concatenate the manifest with the latent means vector
 effMModeanFull <- mxAlgebra(expression = cbind(effMMod,lmodmeans), name = "effMModFull")
@@ -1565,9 +1564,6 @@ if (2 %in% ordinallength) {
   # No of rows = no of binary vars
 binaryflag <- c(binaryflag[1:length(acevars)],rep(FALSE,length(acevars)))
 nrowfilterbinary <- sum(binaryflag)
-print("HERE")
-print(binaryflag)
-print(nrowfilterbinary)
   # No of cols = vars in total
 ncolsfilterbinary <- length(variables)
   # 1 if var = binary and 0 if not
@@ -1582,10 +1578,7 @@ valfilterbinary <- binaryflag
 valfilterbinary[valfilterbinary== TRUE] <- 1
 flag <- which(valfilterbinary == 1)
 filtermatvalues <- matrix(unlist(lapply(flag, bfilter, vec = valfilterbinary)),nrow = nrowfilterbinary, ncol = length(valfilterbinary), byrow = TRUE)
-print("lala")
-print(filtermatvalues)
 filtermatbin <- mxMatrix(type = "Full", values = filtermatvalues, name = "fmatbin")
-print(filtermatbin)
 binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZ %*% t(fmatbin), name = "binCov")
 
 if (moderation == TRUE) {
@@ -1593,7 +1586,6 @@ binarycov <- mxAlgebra(expression = fmatbin %*%expCovMZnMod %*% t(fmatbin), name
 }
 
 one <- mxMatrix(type = "Unit", nrow = nrowfilterbinary, ncol = 1, name = "Unit")
-print(one)
 var1 <- mxConstraint(expression = diag2vec(binCov)==Unit , name = "VConstraint1")
 binary <- c(filtermatbin,binarycov,one,var1)
 if (moderation == TRUE) {
