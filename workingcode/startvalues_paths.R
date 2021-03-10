@@ -18,11 +18,17 @@ ey_1 <- rnorm(1000, mean = 0, sd = 2)
 ey_2 <- rnorm(1000, mean = 0, sd = 2)
 ez_1 <- rnorm(1000, mean = 0, sd = 3)
 ez_2 <- rnorm(1000, mean = 0, sd = 3)
+ed_1 <- rnorm(1000, mean = 0, sd = 1.7)
+ed_2 <- rnorm(1000, mean = 0, sd = 1.7)
 y_1 <- cov1long*.7 + cov2long*0.8 + cov3wide_1*1.4 + cov4wide_1*2  + ey_1
 y_2 <- cov1long*.7 + cov2long*0.8  + cov3wide_2*1.4 + cov4wide_2*2 + ey_2
 z_1 <- cov1long*0.01 + cov2long*2 + cov3wide_1*0.9 + cov4wide_1*3  + ez_1
 z_2 <- cov1long*0.01 + cov2long*2  + cov3wide_2*0.9 + cov4wide_2*3 + ez_2
-usedata <- data.frame(cbind(y_1,z_1,y_2,z_2,cov1long,cov2long,cov3wide_1,cov4wide_1,cov3wide_2,cov4wide_2))
+d_1 <- cov1long*2 + cov2long*0.4 + cov3wide_1*1.2 + cov4wide_1*2.7  + ed_1
+d_2 <- cov1long*2 + cov2long*0.4  + cov3wide_2*1.2 + cov4wide_2*2.7 + ed_2
+
+
+usedata <- data.frame(cbind(y_1,z_1,y_2,z_2,d_1,d_2,cov1long,cov2long,cov3wide_1,cov4wide_1,cov3wide_2,cov4wide_2))
 summary(usedata)
 
 
@@ -31,8 +37,8 @@ covvarslong_checked <- c("cov1long","cov2long")
 covvarswide_checked <- c("cov3wide_1","cov4wide_1","cov3wide_2","cov4wide_2")
 covvarswide_checked <- c("cov3wide_1","cov3wide_2")
 covvarsall <- c(covvarslong_checked,covvarswide_checked)
-acevars1 <- c("y_1","z_1")
-acevars <- c("y","z")
+acevars1 <- c("y_1","z_1","d_1")
+acevars <- c("y","z","d")
 #acevars1 <- c("y_1")
 #acevars <- c("y")
 nv <- length(acevars)
@@ -125,7 +131,8 @@ pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
 # additional argument: coracerandom = FALSE -> if TRUE the values provided in coruniv and corbiv are used as start values for a random draw of assumed correlations
     # coracerandomtrials = 10
     # coracerandomdist = "normal" # alternative values = "uniform" or "cautchy" or "log" -> values provided in coruniv and corbiv are used as mean of distribution as well, sd of distribution is set to 1
-
+coruniv = c(0.3,0.3,0.3)
+corbiv = c(0.2,0.2,0.2) 
 describe(usedata)
 varacevars <- diag(var(na.omit(usedata)[,acevars1]))
 
@@ -149,3 +156,20 @@ diag(valuesE) <-diag(valuesE)*corunivE
 valuesE[lower.tri(valuesE, diag = FALSE)] <- valuesE[lower.tri(valuesE, diag = FALSE)]*corbivE
 valuesEbeta <- valuesE
 valuesEbeta[lower.tri(valuesEbeta, diag = FALSE)] <- 0
+
+
+freeACE <- matrix(TRUE,nrow = nv,ncol = nv, byrow = FALSE)
+freeACE[upper.tri(freeACE, diag = FALSE)] <- FALSE
+freeACE
+
+freeEbeta <- freeACE
+freeEbeta[lower.tri(freeEbeta, diag = FALSE)] <- FALSE
+freeEbeta
+
+
+
+## Start values for beta paths
+# formula of bivariate beta (regression): beta = cov(x,y)/var(x)    
+
+
+

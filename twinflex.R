@@ -623,10 +623,15 @@ t <- m+l+c
 ###############################################################################
 # Matrix "b": The matrix of the phenotypic effects
 ###############################################################################
-mat <- matrix(0.3,nrow = nv,ncol = nv)
-freepathB <- lower.tri(mat)
-mat[upper.tri(mat, diag = TRUE)] <- 0
-valuespathB <- mat
+covacevars <- var(usedata[,acevars1], use = "pairwise")
+varianceacevars <- (diag(covacevars)^-1)  
+varianceacevars <- matrix(varianceacevars, nrow = nv, ncol = nv, byrow = TRUE)
+varianceacevars[upper.tri(varianceacevars, diag = TRUE)] <- 0
+covarianceacevars <- covacevars
+covarianceacevars[upper.tri(covarianceacevars, diag = TRUE)] <- 0
+valuespathB <- varianceacevars*covarianceacevars
+freepathB <- lower.tri(valuespathB)
+
 nvstring <- as.character(1:nv)
 pathBlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("b",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathBlabel[upper.tri(pathBlabel, diag = TRUE)] <- NA
@@ -693,7 +698,7 @@ pathCovvaluevariance[!is.na(pathCovvaluevariance)] <- .3
 pathCovvaluevariance[is.na(pathCovvaluevariance)] <- 0
 mode(pathCovvaluevariance) <- "numeric"
 pathCovfreevariance <- pathCovvaluevariance==.3
-#pathCovvaluevariance <- (pathCovvaluevariance*10/3)*pathCovstartwide
+pathCovvaluevariance <- (pathCovvaluevariance*10/3)*pathCovstartwide
 
 pathCov_label_constant <- function(string) {
 paste0("b",rep(paste0(string,1:nv),2),rep(c(1,2),each=nv))
@@ -707,10 +712,7 @@ pathCovvalueconstant[!is.na(pathCovvalueconstant)] <- .3
 pathCovvalueconstant[is.na(pathCovvalueconstant)] <- 0
 mode(pathCovvalueconstant) <- "numeric"
 pathCovfreeconstant <- pathCovvalueconstant==.3
-print("startwerte pathcov")
-print(pathCovvalueconstant)
 pathCovvalueconstant <- (pathCovvalueconstant*10/3)*pathCovstartlong
-
 pathCovlabel <- cbind(pathCovlabelconstant,pathCovlabelvariance)
 pathCovvalue <- cbind(pathCovvalueconstant,pathCovvaluevariance)
 pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
@@ -723,10 +725,10 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
                             name = "pCov")
 }
 }
-print(pathCov)
 ###############################################################################
 # Matrices "a","c","e": The matrices with the unmoderated ACE effects
 ###############################################################################
+varacevars <- diag(var(usedata[,acevars1], use = "pairwise"))
 mat <- matrix(varacevars,nrow = nv,ncol = nv, byrow = FALSE) # first row = Var of first acevar; second row = Var of second acevar, ...
 mat[upper.tri(mat, diag = FALSE)] <- 0
 mat <- sqrt(mat)
@@ -747,9 +749,15 @@ diag(valuesE) <-diag(valuesE)*corunivE
 valuesE[lower.tri(valuesE, diag = FALSE)] <- valuesE[lower.tri(valuesE, diag = FALSE)]*corbivE
 valuesEbeta <- valuesE
 valuesEbeta[lower.tri(valuesEbeta, diag = FALSE)] <- 0
-stop()
 
-freepathE <- valuespathE == .3
+freeACE <- matrix(TRUE,nrow = nv,ncol = nv, byrow = FALSE)
+freeACE[upper.tri(freeACE, diag = FALSE)] <- FALSE
+freeACE
+
+freeEbeta <- freeACE
+freeEbeta[lower.tri(freeEbeta, diag = FALSE)] <- FALSE
+freeEbeta
+
 nvstring <- as.character(1:nv)
 pathAlabel <- matrix(apply(expand.grid(nvstring, nvstring), 1, function(x) paste("a",x[2], x[1], sep="")), nrow = nv, ncol = nv, byrow = TRUE)
 pathAlabel[upper.tri(pathAlabel, diag = FALSE)] <- NA
@@ -767,27 +775,27 @@ print(pathACElb)
 # ACE paths with constraints if there is no bivariate moderation of ace and beta paths 
 if (moderation == FALSE | (moderation == TRUE & is.null(modACEbiv) & Betamoderation == FALSE)) {
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesA,
                   lbound = pathACElb,
                   labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesC,
                   lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathE,
+                  free = freeEbeta,
                   values = valuesEbeta,
                   lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")
 } else if (type == "chol") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesE,
                   lbound = pathACElb,
                   labels = pathElabel,
@@ -798,27 +806,27 @@ pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
 # ACE paths without constraints if there is a bivariate moderation of ace or beta paths 
 if (moderation == TRUE & (!is.null(modACEbiv) | Betamoderation == TRUE)) {
 pathA <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesA,
                   lbound = pathACElb,
                   labels = pathAlabel,
                   name = "a")
 pathC <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesC,
                   lbound = pathACElb,
                   labels = pathClabel,
                   name = "c")
 if (type == "aceb") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathE,
+                  free = freeEbeta,
                   values = valuesEbeta,
                   lbound = pathACElb,
                   labels = pathElabel,
                   name = "e")
 } else if (type == "chol") {
 pathE <- mxMatrix(type = "Lower", nrow = nv, ncol = nv, byrow = TRUE,
-                  free = freepathAC,
+                  free = freeACE,
                   values = valuesE,
                   lbound = pathACElb,
                   labels = pathElabel,
@@ -1411,6 +1419,7 @@ pathCov <- mxMatrix(type = "Full", nrow = c, ncol = ntv, byrow = FALSE,
                             values = t(pathCovvalue),
                             labels = t(pathCovlabel),
                             name = "pCov")
+print(pathCov)
 
 # Matrix of definition variables for mean moderation
 labeldef <- paste0("data",".",covvarsall)
