@@ -36,11 +36,12 @@ summary(usedata)
 covvarslong_checked <- c("cov1long","cov2long")
 covvarswide_checked <- c("cov3wide_1","cov4wide_1","cov3wide_2","cov4wide_2")
 covvarswide_checked <- c("cov3wide_1","cov3wide_2")
+covvarswide_checked <- NULL
 covvarsall <- c(covvarslong_checked,covvarswide_checked)
 acevars1 <- c("y_1","z_1","d_1")
 acevars <- c("y","z","d")
-#acevars1 <- c("y_1")
-#acevars <- c("y")
+acevars1 <- c("y_1")
+acevars <- c("y")
 nv <- length(acevars)
 covvars1 <- grep("_1$", covvarswide_checked, value = TRUE)
 covvars2 <- grep("_2$", covvarswide_checked, value = TRUE)
@@ -170,6 +171,13 @@ freeEbeta
 
 ## Start values for beta paths
 # formula of bivariate beta (regression): beta = cov(x,y)/var(x)    
+nv <- 2
+a <- c("age", "sex")
+pathCov_label_constant <- function(string) {
+paste0("b",rep(paste0(string,1:nv),2),rep(c(1,2),each=nv))
+}
 
+pathCovlabelconstant <- as.matrix(sapply(a,pathCov_label_constant))
+pathCovlabelconstant
 
 

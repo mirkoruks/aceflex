@@ -153,7 +153,6 @@ if (!is.null(modACEuniv) | !is.null(modACEbiv)) {
 } else {
   ACEmoderation <- FALSE
 }  
-print(moderation)
 if (moderation == TRUE) {
   
 # Split function to get the moderators out of the the strings supplied to the function
@@ -178,8 +177,6 @@ moderatorunivACE[[i]] <- varsACEuniv[[i]][2:length(varsACEuniv[[i]])] # save mod
 }
 
 modvarsACEuniv <- unique(unlist(moderatorunivACE))
-print("Hier")
-print(moderatedunivACE)
 if (!(all(unlist(moderatedunivACE) %in% acevars))) {
   stop("Some of the moderated variables provided in modACEuniv argument are missing in the acevars argument!")
 }
@@ -200,9 +197,6 @@ moderatedbivACE[[i]] <- varsACEbiv[[i]][1:2] # save moderated vars
 moderatorbivACE[[i]] <- varsACEbiv[[i]][3:length(varsACEbiv[[i]])] # save moderators
 }
 modvarsACEbiv <- unique(unlist(moderatorbivACE))
-print("Hier")
-print(unlist(moderatedbivACE))
-print(acevars)
 
 if (!(all(unlist(moderatedbivACE) %in% acevars))) {
   stop("Some of the moderated variables provided in modACEbiv argument are missing in the acevars argument!")
@@ -344,8 +338,6 @@ modvarslegend <- merge(modvarslegend, betamat, by.x = "modvarsuser", by.y = "mod
 modvarslegend <- modvarslegend[,c(2,1,3:ncol(modvarslegend))]
 modvarslegend <- modvarslegend[order(modvarslegend$modvarsmachine),]
 modvarslegend
-print(modvarslegend)
-print("lalalala")
 
 # Check if moderator variables are in data frame
 moderatorvars <- modvarslegend[modvarslegend$modvarsuser != "NA","modvarsuser"]
@@ -353,8 +345,6 @@ moderatorvars1 <-    paste0(moderatorvars,sep,"1")
 moderatorvars2 <-    paste0(moderatorvars,sep,"2") 
 moderatorvarswide <- c(moderatorvars1, moderatorvars2)
 moderatorvarsnotwide <- unlist(lapply(moderatorvarswide, existence))
-print("A")
-print(moderatorvarsnotwide)
 moderatorvarswide <- moderatorvarswide[!moderatorvarswide %in% moderatorvarsnotwide]
 if (!is.null(moderatorvarsnotwide)) {
   splitvec <- paste0("\\",sep,1,"|","\\",sep,"2")
@@ -362,14 +352,9 @@ moderatorvarsnotwide <- unique(sapply(strsplit(moderatorvarsnotwide, split = spl
 } else {
 moderatorvarsnotwide <- NULL
 }
-print("B")
-print(moderatorvarsnotwide)
 moderatorvarsnotfound <- unlist(lapply(moderatorvarsnotwide, existence))
-print("C")
-print(moderatorvarsnotfound)
 existenceerror(moderatorvarsnotfound)
 moderatorvars <- c(moderatorvarswide,moderatorvarsnotwide)
-print(moderatorvars)
 # Check if there are matches between moderator variables and other variables
 matchwithvars <- grep(paste(variables,collapse="|"),moderatorvars)
 if (length(matchwithvars) > 0) {
@@ -658,25 +643,30 @@ pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 # Matrix "pCov": The matrix with the effects of the covariates
   # Condition: Covariates specified in covariance matrix (covariance = TRUE)
 ###############################################################################
+if (!is.null(covvars)) {
 Ycov <- as.matrix(subset(na.omit(usedata), select = acevars1))
 Xcov <- cbind(1,as.matrix(subset(na.omit(usedata), select = c(covvarslong_checked,covvars1))))
 pathCovstart <- (t(solve(t(Xcov)%*%Xcov)%*%t(Xcov)%*%Ycov))[,2:ncol(Xcov)]
-print(head(pathCovstart))
 if (is.null(dim(pathCovstart))) {
 pathCovstart <- matrix(t(pathCovstart), ncol = length(pathCovstart))
 } 
 pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete matrix rownames(pathCovstart) <- NULL
 colnames(pathCovstart) <- NULL
 pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
+
+if (!is.null(covvarswide_checked)) {
 pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
+
+
 if (is.null(ncol(pathCovstartwide))) {
 pathCovstartwide <- matrix(pathCovstartwide, nrow = length(pathCovstartwide))
 }
 pathCovstartwide <- pathCovstartwide[, rep(1:ncol(pathCovstartwide), each=2)]
-print("startwerte pathcov1")
-print(pathCovstartlong)
-print(pathCovstartwide)
-
+} 
+if (is.null(covvarswide_checked)) {
+pathCovstartwide <- NULL
+  }
+}
 # Some helper functions for the labeling process etc.
 if (!is.null(covvars)) {
 pathCov_label_variance <- function(string) {
@@ -770,7 +760,7 @@ pathACElb[pathACElb == 0] <- NA
 if (lboundACE == FALSE) {
   pathACElb[!is.na(pathACElb)] <- NA
 }
-print(pathACElb)
+
 
 # ACE paths with constraints if there is no bivariate moderation of ace and beta paths 
 if (moderation == FALSE | (moderation == TRUE & is.null(modACEbiv) & Betamoderation == FALSE)) {
@@ -1418,8 +1408,7 @@ pathCov <- mxMatrix(type = "Full", nrow = c, ncol = ntv, byrow = FALSE,
                             free = t(pathCovfree),
                             values = t(pathCovvalue),
                             labels = t(pathCovlabel),
-                            name = "pCov")
-print(pathCov)
+                            name = "pCov") #Dimension = c*ntv
 
 # Matrix of definition variables for mean moderation
 labeldef <- paste0("data",".",covvarsall)
@@ -1440,7 +1429,6 @@ modMeanCov <- mxAlgebra(expression =M+t(effMCovFull), name = "modM")
 # Matrix of expected means
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%modM), name = "expMean")
 }
-
 # add here the construction of the expected means matrix if there is a moderation 
   # it does not matter that there are already expected means defined, here they will
   # be overruled
@@ -1483,8 +1471,6 @@ if (nv > 1) {
     modmeanfree <- modmeanfree[1:5,1:nv]
     row.names(modmeanfree) <- modvarslegend$modvarsmachine
 }
-print("Moderatoren Legende")
-print(modvarslegend)
 for (i in 1:(dim(modvarslegend)[1])) {
 for (j in acevars) {
   if (!is.null(modACEuniv)) {
@@ -1505,7 +1491,6 @@ for (j in acevars) {
   if (rownames(modmeanfree)[i] %in% acevars) {  
 #  if (rownames(modmeanfree)[i] == j) {
     modmeanfree[i,] <- FALSE
-    print("Hier gehts")
   }
     row.names(modmeanfree) <- modvarslegend$modvarsmachine
   }
@@ -1523,10 +1508,6 @@ if (Betamoderation == TRUE) {
 }
 }
 }
-print("GUCK HIERHIN!")
-print(modmeanfree)
-modvarslegend
-
 modmeanfree <- cbind(modmeanfree,modmeanfree)
 modmeanfree <- modmeanfree[rep(1:nrow(modmeanfree), times = c(2,2,2,2,2)),]
 
@@ -1544,7 +1525,7 @@ pathModMean <- mxMatrix(type = "Full", nrow = 5*2, ncol = ntv, byrow = FALSE, # 
                             name = "pMMod",
                         dimnames = list(NULL,NULL))
 pathModMean
-labeldefMModean <- NULL
+labeldefModMean <- NULL
 modvarslegend[is.na(modvarslegend)] <- "NA"
 # Matrix of definition variables for mean moderation
 for (i in 1:length(modvarsmachine)) {
@@ -1572,24 +1553,41 @@ l2 <- paste0("data.",modvarslegend$modvarsuser[i])
   l2 <- NA
 }
 }
-  labeldefMModean <- rbind(labeldefMModean,l1,l2)
-  row.names(labeldefMModean) <- NULL
+  labeldefModMean <- rbind(labeldefModMean,l1,l2)
+  row.names(labeldefModMean) <- NULL
   
 }
-labeldefMModean
+labeldefModMean
 
-defMModean      <- mxMatrix( type="Full", nrow=1, ncol=10, free=FALSE, labels=labeldefMModean, name="defMMod" )
+defModMean      <- mxMatrix( type="Full", nrow=1, ncol=10, free=FALSE, labels=labeldefModMean, name="defMMod" )
 
 # Matrix effects on means
-effMModean <- mxAlgebra(expression = defMMod%*%pMMod, name = "effMMod")
+effMModean <- mxAlgebra(expression = defMMod%*%pMMod, name = "effMMod") # Dimension = 1*ntv
 
 # Vector of latent variables (all set to zero) just need to concatenate them to the manifests to get the dimensions right
+if (covariance == TRUE) {
 latmodmeans <- mxMatrix(type = "Full", nrow = 1, ncol = c+l, name = "lmodmeans") # theoretisch m?ssten Kovariate in der Kovarianzmatrix m?glich sein, daher das c
+}
+if (covariance == FALSE) {
+latmodmeans <- mxMatrix(type = "Full", nrow = 1, ncol = l, name = "lmodmeans") 
 
+}
 # Concatenate the manifest with the latent means vector
-effMModeanFull <- mxAlgebra(expression = cbind(effMMod,lmodmeans), name = "effMModFull")
+effMModeanFull <- mxAlgebra(expression = cbind(effMMod,lmodmeans), name = "effMModFull") # Dimension = 1*l (if covariance == FALSE) oder = 1*(c+l) (if covariance == TRUE)
 
 # Matrix of moderated means
+print(pathCov)
+print(l)
+print(c)
+print("Die 8x1 Matrix matM")
+print(matM)
+print("Part 1 der 10x1 Matrix effMModFull")
+print(latmodmeans)
+print("Part 2.1 der 10x1 Matrix effMModFull")
+print(defModMean)
+print("Part 2.2 der 10x1 Matrix effMModFull")
+print(pathModMean)
+
 modMean <- mxAlgebra(expression =M+t(effMModFull), name = "modM")
 if (covariance == FALSE) {
 modMean <- mxAlgebra(expression =M+t(effMModFull)+t(effMCovFull), name = "modM")
@@ -1690,7 +1688,7 @@ if (ACEmoderation == FALSE) {
   defbetapars <- NULL
 }
   modmeanpars <- c(pathModMean, effMModean,latmodmeans,effMModeanFull,modMean)
-  defmodpars <- c(defMModean,defacepars,defbetapars)
+  defmodpars <- c(defModMean,defacepars,defbetapars)
 }
 
 # group specific model objects
@@ -1711,17 +1709,19 @@ modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,defCovMe
 if (moderation == TRUE) {
 if (!is.null(ordinal)) {
 if (2 %in% ordinallength) {
-  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars,name="MZ")
+modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars,name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars,name="DZ")
 }
 }
-if (covariance == FALSE & !is.null(covariance)) {
+if (covariance == FALSE) {
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, defCovMean,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars,name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,defCovMean,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars,name="DZ")
 
 }
+if (covariance == TRUE) {
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,defacepars,defbetapars,defmodpars,modacepars,modbetapars,modmeanpars, name="DZ")
+}
 }
 multi     <- mxFitFunctionMultigroup(c("MZ","DZ"))
 
