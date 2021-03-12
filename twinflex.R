@@ -691,7 +691,7 @@ pathCovfreevariance <- pathCovvaluevariance==.3
 pathCovvaluevariance <- (pathCovvaluevariance*10/3)*pathCovstartwide
 
 pathCov_label_constant <- function(string) {
-paste0("b",rep(paste0(string,1:nv),2),rep(c(1,2),each=nv))
+paste0("b",rep(paste0(string,1:nv),2)) #,rep(c(1,2),each=nv))
 }
 pathCovlabelconstant <- as.matrix(sapply(covvarslong_checked,pathCov_label_constant))
 if (length(pathCovlabelconstant)==0) {
@@ -718,7 +718,7 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
 ###############################################################################
 # Matrices "a","c","e": The matrices with the unmoderated ACE effects
 ###############################################################################
-varacevars <- diag(var(usedata[,acevars1], use = "pairwise"))
+varacevars <- diag(as.matrix(var(usedata[,acevars1], use = "pairwise")))
 mat <- matrix(varacevars,nrow = nv,ncol = nv, byrow = FALSE) # first row = Var of first acevar; second row = Var of second acevar, ...
 mat[upper.tri(mat, diag = FALSE)] <- 0
 mat <- sqrt(mat)
@@ -1424,7 +1424,7 @@ latentmeans <- mxMatrix(type = "Full", nrow = 1, ncol = l, name = "lmeans")
 effMeanCovFull <- mxAlgebra(expression = cbind(effMCov,lmeans), name = "effMCovFull") # this matrix will be used if there is a moderation AND covariates in the means matrix -> modM and expMean will be overwritten if there is a moderation
 
 # Matrix of moderated means
-modMeanCov <- mxAlgebra(expression =M+t(effMCovFull), name = "modM")
+modMean <- mxAlgebra(expression =M+t(effMCovFull), name = "modM")
 
 # Matrix of expected means
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%modM), name = "expMean")
@@ -1515,16 +1515,15 @@ modmeanfree[c(1,3,5,7,9),(length(acevars)+1):(length(acevars)*2)] <- FALSE
 modmeanfree[c(2,4,6,8,10),1:(length(acevars))] <- FALSE
 
 modmeanval <-  modmeanfree
-modmeanval[!is.null(modmeanval)] <- 0
-
+modmeanval[modmeanval==FALSE] <- 0
+modmeanval[modmeanval==TRUE] <- 0.1
 # matrix with effect sizes of moderation of the means stored in M
 pathModMean <- mxMatrix(type = "Full", nrow = 5*2, ncol = ntv, byrow = FALSE, # 5 as maximum number of moderators (at the time)
                             free = (modmeanfree),
                             values = (modmeanval),
                             labels = (modmeanlabel),
                             name = "pMMod",
-                        dimnames = list(NULL,NULL))
-pathModMean
+                        dimnames = list(NULL,NULL)) # Dimension = 10*ntv
 labeldefModMean <- NULL
 modvarslegend[is.na(modvarslegend)] <- "NA"
 # Matrix of definition variables for mean moderation
@@ -1559,10 +1558,10 @@ l2 <- paste0("data.",modvarslegend$modvarsuser[i])
 }
 labeldefModMean
 
-defModMean      <- mxMatrix( type="Full", nrow=1, ncol=10, free=FALSE, labels=labeldefModMean, name="defMMod" )
+defModMean      <- mxMatrix( type="Full", nrow=1, ncol=10, free=FALSE, labels=labeldefModMean, name="defMMod" ) # Dimension = 1*10
 
 # Matrix effects on means
-effMModean <- mxAlgebra(expression = defMMod%*%pMMod, name = "effMMod") # Dimension = 1*ntv
+effMModMean <- mxAlgebra(expression = defMMod%*%pMMod, name = "effMMod") # Dimension = 1*ntv
 
 # Vector of latent variables (all set to zero) just need to concatenate them to the manifests to get the dimensions right
 if (covariance == TRUE) {
@@ -1573,25 +1572,14 @@ latmodmeans <- mxMatrix(type = "Full", nrow = 1, ncol = l, name = "lmodmeans")
 
 }
 # Concatenate the manifest with the latent means vector
-effMModeanFull <- mxAlgebra(expression = cbind(effMMod,lmodmeans), name = "effMModFull") # Dimension = 1*l (if covariance == FALSE) oder = 1*(c+l) (if covariance == TRUE)
+effMModMeanFull <- mxAlgebra(expression = cbind(effMMod,lmodmeans), name = "effMModFull") # Dimension = 1*l (if covariance == FALSE) oder = 1*(c+l) (if covariance == TRUE)
 
 # Matrix of moderated means
-print(pathCov)
-print(l)
-print(c)
-print("Die 8x1 Matrix matM")
-print(matM)
-print("Part 1 der 10x1 Matrix effMModFull")
-print(latmodmeans)
-print("Part 2.1 der 10x1 Matrix effMModFull")
-print(defModMean)
-print("Part 2.2 der 10x1 Matrix effMModFull")
-print(pathModMean)
 
 modMean <- mxAlgebra(expression =M+t(effMModFull), name = "modM")
 if (covariance == FALSE) {
 modMean <- mxAlgebra(expression =M+t(effMModFull)+t(effMCovFull), name = "modM")
-  }
+}
 
 # Matrix of expected means
 mean <- mxAlgebra(expression = t(Filter%*%solve(I-A)%*%modM), name = "expMean")
@@ -1658,7 +1646,6 @@ expDZ     <- mxExpectationNormal(covariance="expCovDZ", means="expMean",
 }
 # Fit function (FIML)
 fitfun     <- mxFitFunctionML()
-
 # parameters
 pars      <- list(pathB, pathA, pathC, pathE, pathZ, matA, pathMan, pathACE,
                   covCovariates, covMan, covManCov, covManCovACE, covV,matSMan,
@@ -1670,7 +1657,7 @@ pars <- c(pars,c(thinG,inc,threG))
 
 if (!is.null(covvars)) {
 if (covariance == FALSE) {
-covmeanpars <- c(effMeanCov,latentmeans,effMeanCovFull,modMeanCov,pathCov)  
+covmeanpars <- c(effMeanCov,latentmeans,effMeanCovFull,modMean,pathCov)  
 pars <- c(pars,covmeanpars)
 }
 if (covariance == TRUE) {
@@ -1687,10 +1674,9 @@ if (ACEmoderation == FALSE) {
   modbetapars <- NULL
   defbetapars <- NULL
 }
-  modmeanpars <- c(pathModMean, effMModean,latmodmeans,effMModeanFull,modMean)
+  modmeanpars <- c(pathModMean, effMModMean,latmodmeans,effMModMeanFull,modMean)
   defmodpars <- c(defModMean,defacepars,defbetapars)
 }
-
 # group specific model objects
 modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="DZ")

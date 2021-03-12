@@ -38,8 +38,8 @@ covvarswide_checked <- c("cov3wide_1","cov4wide_1","cov3wide_2","cov4wide_2")
 covvarswide_checked <- c("cov3wide_1","cov3wide_2")
 covvarswide_checked <- NULL
 covvarsall <- c(covvarslong_checked,covvarswide_checked)
-acevars1 <- c("y_1","z_1","d_1")
-acevars <- c("y","z","d")
+#acevars1 <- c("y_1","z_1","d_1")
+#acevars <- c("y","z","d")
 acevars1 <- c("y_1")
 acevars <- c("y")
 nv <- length(acevars)
@@ -61,12 +61,16 @@ pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete m
 rownames(pathCovstart) <- NULL
 colnames(pathCovstart) <- NULL
 pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
+if (!is.null(covvarswide_checked)) {
 pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
 if (is.null(ncol(pathCovstartwide))) {
 pathCovstartwide <- matrix(pathCovstartwide, nrow = length(pathCovstartwide))
 }
 pathCovstartwide <- pathCovstartwide[, rep(1:ncol(pathCovstartwide), each=2)]
-
+}
+if (is.null(covvarswide_checked)) {
+pathCovstartwide <- NULL
+  }
 
 # Some helper functions for the labeling process etc.
 pathCov_label_variance <- function(string) {
@@ -91,9 +95,10 @@ pathCovfreevariance <- pathCovvaluevariance==.3
 pathCovvaluevariance <- (pathCovvaluevariance*10/3)*pathCovstartwide
 
 pathCov_label_constant <- function(string) {
-paste0("b",rep(paste0(string,1:nv),2),rep(c(1,2),each=nv))
+paste0("b",rep(paste0(string,1:nv),2))
 }
 pathCovlabelconstant <- as.matrix(sapply(covvarslong_checked,pathCov_label_constant))
+pathCovlabelconstant
 if (length(pathCovlabelconstant)==0) {
   pathCovlabelconstant <- NULL
 }
@@ -135,7 +140,8 @@ pathCovfree <- cbind(pathCovfreeconstant,pathCovfreevariance)
 coruniv = c(0.3,0.3,0.3)
 corbiv = c(0.2,0.2,0.2) 
 describe(usedata)
-varacevars <- diag(var(na.omit(usedata)[,acevars1]))
+varacevars <-diag(as.matrix(var(usedata[,acevars1], use = "pairwise")))
+varacevars
 
 mat <- matrix(varacevars,nrow = nv,ncol = nv, byrow = FALSE) # first row = Var of first acevar; second row = Var of second acevar, ...
 mat[upper.tri(mat, diag = FALSE)] <- 0
