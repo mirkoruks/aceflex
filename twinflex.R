@@ -1,5 +1,5 @@
 twinflex <- function(acevars, data, zyg, sep, covvars=NULL, covariance = TRUE, ordinal = NULL, optimizer = NULL, tryHard = FALSE, exh = FALSE, tries = 10, type = "chol", modACEuniv = NULL, modACEbiv = NULL, modBeta = NULL, lboundACE = TRUE, coruniv = c(0.3,0.3,0.3), corbiv = c(0.2,0.2,0.2)) {
-
+data <- as.data.frame(data)
 if ("OpenMx" %in% (.packages()) == FALSE) {
   stop("You need to load the OpenMx library")
 }
@@ -372,6 +372,7 @@ moderatorvars
 rna <- function(x) replace(x, is.na(x), "")
 checkvariance <- function(v1,v2) {
 identicalcheck <- as.vector(colSums(ifelse(rna(data[,v1, drop = FALSE])==rna(data[,v2, drop = FALSE]), 0, 1)))
+print(identicalcheck)
 if (0 %in% identicalcheck == TRUE) {
 ind <- identicalcheck==0
 result1 <- v1[ind]
@@ -385,8 +386,9 @@ else {
   cat("\n\n\nAll the wide-formatted variables have within-pair variance")
 }
 }
+print(varswide1)
 checkvariance(varswide1,varswide2)
-
+print(variables)
 existence_check_zyg <- existence(zyg)
 existenceerror(existence_check_zyg)
 
@@ -1184,6 +1186,7 @@ betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B + pMo
 betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B + pMod3B*dMod32B + pMod4B*dMod42B + pMod5B*dMod52B, name = "betaMod2")
 
 defbetapars <- c(defMod11Beta,defMod12Beta,defMod21Beta,defMod22Beta,defMod31Beta,defMod32Beta,defMod41Beta,defMod42Beta,defMod51Beta,defMod52Beta)
+print(defbetapars)
 modbetapars <- c(pathMod1Beta,pathMod2Beta,pathMod3Beta,pathMod4Beta,pathMod5Beta,betaModFull1,betaModFull2)
 
 pathMan <- mxAlgebra(expression = rbind(cbind(betaMod1,pZ),
@@ -1516,7 +1519,7 @@ modmeanfree[c(2,4,6,8,10),1:(length(acevars))] <- FALSE
 
 modmeanval <-  modmeanfree
 modmeanval[modmeanval==FALSE] <- 0
-modmeanval[modmeanval==TRUE] <- 0.1
+modmeanval[modmeanval==TRUE] <- 0
 # matrix with effect sizes of moderation of the means stored in M
 pathModMean <- mxMatrix(type = "Full", nrow = 5*2, ncol = ntv, byrow = FALSE, # 5 as maximum number of moderators (at the time)
                             free = (modmeanfree),
@@ -1726,7 +1729,7 @@ modelACE  <- mxModel("ACE",  modelMZ, modelDZ, multi)
 #print(pathA)
 #print(pathC)
 #print(pathE)
-#sink()
+##sink()
 #stop("Stop!")
 #}
 

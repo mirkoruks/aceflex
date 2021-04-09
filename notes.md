@@ -1,3 +1,6 @@
+# to do
+[] fix bug when "_" in varname
+[] fix bug related to matrix name when beta paths are moderated
 # to be added:
 ## with respect to the working the moderation
 - make sure to calculate the variance constraint for binary variables only with the unmoderated paths so that it also applies to the case with moderated paths and fixes the variance of the trait to 1 given a moderator value of 0
