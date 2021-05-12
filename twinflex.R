@@ -209,6 +209,17 @@ if (!(all(unlist(moderatedbivACE) %in% acevars))) {
   moderatorbivACE <- NULL
   }
 }
+if (ACEmoderation == FALSE) {
+modvarsACEuniv <- NULL
+varsACEuniv <- NULL
+moderatedunivACE <- NULL
+moderatorunivACE <- NULL
+modvarsACEbiv <- NULL
+varsACEbiv <- NULL
+moderatedbivACE <- NULL
+moderatorbivACE <- NULL
+}
+
 if (Betamoderation == TRUE) {
 varsBeta <- lapply(modBeta,splitit)
 moderatedBeta <- list()
@@ -493,6 +504,34 @@ levelserror <- function(result) {
 levelslist <- lapply(ordinalwide, nlevels)
 levelserror(unlist(lapply(ordinalwide, llevels)))
 
+covacevars <- var(usedata[,acevars1], use = "pairwise")
+varacevars <- diag(as.matrix(var(usedata[,acevars1], use = "pairwise")))
+if (!is.null(covvars)) {
+Ycov <- as.matrix(subset(na.omit(usedata), select = acevars1))
+Xcov <- cbind(1,as.matrix(subset(na.omit(usedata), select = c(covvarslong_checked,covvars1))))
+pathCovstart <- (t(solve(t(Xcov)%*%Xcov)%*%t(Xcov)%*%Ycov))[,2:ncol(Xcov)]
+if (is.null(dim(pathCovstart))) {
+pathCovstart <- matrix(t(pathCovstart), ncol = length(pathCovstart))
+} 
+pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete matrix rownames(pathCovstart) <- NULL
+colnames(pathCovstart) <- NULL
+pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
+
+if (!is.null(covvarswide_checked)) {
+pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
+
+
+if (is.null(ncol(pathCovstartwide))) {
+pathCovstartwide <- matrix(pathCovstartwide, nrow = length(pathCovstartwide))
+}
+pathCovstartwide <- pathCovstartwide[, rep(1:ncol(pathCovstartwide), each=2)]
+} 
+if (is.null(covvarswide_checked)) {
+pathCovstartwide <- NULL
+  }
+}
+
+
 usedata[,ordinalwide] <- mxFactor(usedata[,ordinalwide], levels = levelslist)
 cat("\n\n\nSummary of used variables\n\n")
 print(summary(usedata))
@@ -610,7 +649,11 @@ t <- m+l+c
 ###############################################################################
 # Matrix "b": The matrix of the phenotypic effects
 ###############################################################################
+
+if (is.null(ordinal)) {
 covacevars <- var(usedata[,acevars1], use = "pairwise")
+}
+
 varianceacevars <- (diag(covacevars)^-1)  
 varianceacevars <- matrix(varianceacevars, nrow = nv, ncol = nv, byrow = TRUE)
 varianceacevars[upper.tri(varianceacevars, diag = TRUE)] <- 0
@@ -645,30 +688,7 @@ pathZ <- mxMatrix(type = "Zero", nrow = nv, ncol = nv, name = "pZ")
 # Matrix "pCov": The matrix with the effects of the covariates
   # Condition: Covariates specified in covariance matrix (covariance = TRUE)
 ###############################################################################
-if (!is.null(covvars)) {
-Ycov <- as.matrix(subset(na.omit(usedata), select = acevars1))
-Xcov <- cbind(1,as.matrix(subset(na.omit(usedata), select = c(covvarslong_checked,covvars1))))
-pathCovstart <- (t(solve(t(Xcov)%*%Xcov)%*%t(Xcov)%*%Ycov))[,2:ncol(Xcov)]
-if (is.null(dim(pathCovstart))) {
-pathCovstart <- matrix(t(pathCovstart), ncol = length(pathCovstart))
-} 
-pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete matrix rownames(pathCovstart) <- NULL
-colnames(pathCovstart) <- NULL
-pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
 
-if (!is.null(covvarswide_checked)) {
-pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
-
-
-if (is.null(ncol(pathCovstartwide))) {
-pathCovstartwide <- matrix(pathCovstartwide, nrow = length(pathCovstartwide))
-}
-pathCovstartwide <- pathCovstartwide[, rep(1:ncol(pathCovstartwide), each=2)]
-} 
-if (is.null(covvarswide_checked)) {
-pathCovstartwide <- NULL
-  }
-}
 # Some helper functions for the labeling process etc.
 if (!is.null(covvars)) {
 pathCov_label_variance <- function(string) {
@@ -720,7 +740,9 @@ pathCov <- mxMatrix(type = "Full", nrow = ntv, ncol = c, byrow = FALSE,
 ###############################################################################
 # Matrices "a","c","e": The matrices with the unmoderated ACE effects
 ###############################################################################
+if (is.null(ordinal)) {
 varacevars <- diag(as.matrix(var(usedata[,acevars1], use = "pairwise")))
+}
 mat <- matrix(varacevars,nrow = nv,ncol = nv, byrow = FALSE) # first row = Var of first acevar; second row = Var of second acevar, ...
 mat[upper.tri(mat, diag = FALSE)] <- 0
 mat <- sqrt(mat)
@@ -946,6 +968,8 @@ freeModACE[[index]][as.vector(i)[1],as.vector(i)[1]] <- TRUE
 }
 }
 } 
+
+
   # Bivariate ACE interaction effects
 if (!is.null(modACEbiv)) {
 for (j in 1:length(modvarsACEmachine)) {
@@ -990,6 +1014,13 @@ matrixstore <- mxMatrix(type = "Full", nrow = nv, ncol = nv, byrow = TRUE,
                        name = name)
 pathModACEStore[[index]] <- matrixstore
 }
+}
+}
+
+if (type == "aceb") {
+for (i in 1:length(names(pathModACEStore))) {
+if (grepl("e$",names(pathModACEStore)[i]))
+pathModACEStore[[i]]@free[!diag(pathModACEStore[[i]]@free)] <-  FALSE
 }
 }
 
@@ -1142,8 +1173,8 @@ modBetalong
 # create list with matrices of moderators of Beta paths
 defModBeta <- list()
   for (i in 1:length(modvarsmachine)) {
-name1 <- paste0("d",modvarsmachine[i],"1","Beta")
-name2 <- paste0("d",modvarsmachine[i],"2","Beta")
+name1 <- paste0("d",modvarsmachine[i],"1","B")
+name2 <- paste0("d",modvarsmachine[i],"2","B")
 index1 <- paste0("def",modvarsmachine[i],"1","Beta")
 index2 <- paste0("def",modvarsmachine[i],"2","Beta")
 defModBeta[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=NA, name= name1)
@@ -1170,6 +1201,8 @@ defModBeta[[index1]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, 
 defModBeta[[index2]]      <- mxMatrix( type="Full", nrow=1, ncol=1, free=FALSE, labels=label2, name= name2)  
   }
 }
+print("defModBeta")
+print(defModBeta)
 # Save matrices with Beta moderators as R objects
 def <- NULL
 for (i in names(defModBeta)) {
@@ -1181,7 +1214,7 @@ path <- NULL
 for (i in names(pathModBetaStore)) {
 assign(i, pathModBetaStore[[i]])
 }
-  
+
 betaModFull1 <- mxAlgebra(expression = b + pMod1B*dMod11B + pMod2B*dMod21B + pMod3B*dMod31B + pMod4B*dMod41B + pMod5B*dMod51B, name = "betaMod1")
 betaModFull2 <- mxAlgebra(expression = b + pMod1B*dMod12B + pMod2B*dMod22B + pMod3B*dMod32B + pMod4B*dMod42B + pMod5B*dMod52B, name = "betaMod2")
 
@@ -1453,8 +1486,8 @@ if (Betamoderation == TRUE) {
 modvarsBetalong <- data.frame(cbind(modvarsBetamachine,modBetalong))
 modvarslegend <- merge(modvarslegend, as.data.frame(modvarsBetalong), by.x = "modvarsmachine", by.y = "modvarsBetamachine", all = TRUE)
 }
-modvarslegend
-
+print(modvarslegend)
+print(modvarsmachine)
 modmeanlabel <- NULL
 for (i in 1:length(modvarsmachine)) {
   effect_t1 <- c(paste0("bMean",modvarsmachine[i],1:nv),rep(NA,nv))
@@ -1462,7 +1495,7 @@ for (i in 1:length(modvarsmachine)) {
   modmeanlabel <- rbind(modmeanlabel,effect_t1,effect_t2)
 }
 colnames(modmeanlabel) <- rep(acevars,2)
-
+print(modmeanlabel)
 modmeanfree <- !is.na(modmeanlabel)
 modmeanfree[modmeanfree = TRUE] <- FALSE
 

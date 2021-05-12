@@ -2,70 +2,133 @@ library(lavaan)
 
 # example model
 mzmodel <- '
-# measurement model
-LOC_1 =~ b1*loc0200_1 + b2*loc0202_1
-EMO_1 =~ b3*cor1101_1 + b4*cor1102_1 + b5*cor1103_1
-LOC_2 =~ b1*loc0200_2 + b2*loc0202_2
-EMO_2 =~ b3*cor1101_2 + b4*cor1102_2 + b5*cor1103_2
 
-# error variances
-loc0200_1 ~~ e1*loc0200_1
-loc0202_1 ~~ e2*loc0202_1
-cor1101_1 ~~ e3*cor1101_1
-cor1102_1 ~~ e4*cor1102_1
-cor1103_1 ~~ e5*cor1103_1
+# phenotypic regressions twin 1
+w3x1 ~ w2x1
+w2x1 ~ w1x1
+w3y1 ~ w2y1
+w2y1 ~ w1y1
+# phenotypic regressions twin 2
+w3x2 ~ w2x2
+w2x2 ~ w1x2
+w3y2 ~ w2y2
+w2y2 ~ w1y2
 
-loc0200_2 ~~ e1*loc0200_2
-loc0202_2 ~~ e2*loc0202_2
-cor1101_2 ~~ e3*cor1101_2
-cor1102_2 ~~ e4*cor1102_2
-cor1103_2 ~~ e5*cor1103_2
+# ACE decomposition Within twin
 
-# Error variances latent traits
-LOC_1~~0*LOC_1
-EMO_1~~0*EMO_1
-LOC_2~~0*LOC_2
-EMO_2~~0*EMO_2
+# A
+Aw1x1 =~ aw1xw1x*w1x1 + aw2xw1x*w2x1 + aw2yw1x*w2y1 
+Aw1y1 =~ aw1yw1y*w1y1 + aw2xw1y*w2y1 + aw2xw1y*w2x1
 
-# phenotypic structural model
-EMO_1 ~ breg*LOC_1
-EMO_2 ~ breg*LOC_2
+Aw2x1 =~ aw2xw2x*w2x1 + aw3xw2x*w3x1 + aw3yw2x*w3y1 
+Aw2y1 =~ aw2yw2y*w2y1 + aw3xw2y*w3y1 + aw3xw2y*w3x1
 
-# ACE decomposition of latent factors
+Aw3x1 =~ aw3xw3x*w3x1 
+Aw3y1 =~ aw3yw3y*w3y1 
 
-ALOC_1 =~ a11*LOC_1 + a21*EMO_1
-AEMO_1 =~ a22*EMO_1
-CLOC_1 =~ c11*LOC_1 + c21*EMO_1
-CEMO_1 =~ c22*EMO_1 
-ELOC_1 =~ e11*LOC_1 
-EEMO_1 =~ e22*EMO_1  
-ALOC_2 =~ a11*LOC_2 + a21*EMO_2
-AEMO_2 =~ a22*EMO_2
-CLOC_2 =~ c11*LOC_2 + c21*EMO_2
-CEMO_2 =~ c22*EMO_2 
-ELOC_2 =~ e11*LOC_2 
-EEMO_2 =~ e22*EMO_2  
+Aw1x2 =~ aw1xw1x*w1x2 + aw2xw1x*w2x2 + aw2yw1x*w2y2 
+Aw1y2 =~ aw1yw1y*w1y2 + aw2xw1y*w2y2 + aw2xw1y*w2x2
 
-    # ACE Variances 
-ALOC_1~~1*ALOC_1
-CLOC_1~~1*CLOC_1
-ELOC_1~~1*ELOC_1
-ALOC_2~~1*ALOC_2
-CLOC_2~~1*CLOC_2
-ELOC_2~~1*ELOC_2
-    # ACE Variances 
-AEMO_1~~1*AEMO_1
-CEMO_1~~1*CEMO_1
-EEMO_1~~1*EEMO_1
-AEMO_2~~1*AEMO_2
-CEMO_2~~1*CEMO_2
-EEMO_2~~1*EEMO_2
+Aw2x2 =~ aw2xw2x*w2x2 + aw3xw2x*w3x2 + aw3yw2x*w3y2 
+Aw2y2 =~ aw2yw2y*w2y2 + aw3xw2y*w3y2 + aw3xw2y*w3x2
 
-    # AC Covariances
-AEMO_1~~1*AEMO_2
-CEMO_1~~1*CEMO_2
-ALOC_1~~1*ALOC_2
-CLOC_1~~1*CLOC_2
+Aw3x2 =~ aw3xw3x*w3x2 
+Aw3y2 =~ aw3yw3y*w3y2 
+
+# C
+Cw1x1 =~ cw1xw1x*w1x1 + cw2xw1x*w2x1 + cw2yw1x*w2y1 
+Cw1y1 =~ cw1yw1y*w1y1 + cw2xw1y*w2y1 + cw2xw1y*w2x1
+
+Cw2x1 =~ cw2xw2x*w2x1 + cw3xw2x*w3x1 + cw3yw2x*w3y1 
+Cw2y1 =~ cw2yw2y*w2y1 + cw3xw2y*w3y1 + cw3xw2y*w3x1
+
+Cw3x1 =~ cw3xw3x*w3x1 
+Cw3y1 =~ cw3yw3y*w3y1 
+
+Cw1x2 =~ cw1xw1x*w1x2 + cw2xw1x*w2x2 + cw2yw1x*w2y2 
+Cw1y2 =~ cw1yw1y*w1y2 + cw2xw1y*w2y2 + cw2xw1y*w2x2
+
+Cw2x2 =~ cw2xw2x*w2x2 + cw3xw2x*w3x2 + cw3yw2x*w3y2 
+Cw2y2 =~ cw2yw2y*w2y2 + cw3xw2y*w3y2 + cw3xw2y*w3x2
+
+Cw3x2 =~ cw3xw3x*w3x2 
+Cw3y2 =~ cw3yw3y*w3y2 
+
+# E
+Ew1x1 =~ ew1xw1x*w1x1 
+Ew1y1 =~ ew1yw1y*w1y1 
+
+Ew2x1 =~ ew2xw2x*w2x1 
+Ew2y1 =~ ew2yw2y*w2y1 
+
+Ew3x1 =~ ew3xw3x*w3x1 
+Ew3y1 =~ ew3yw3y*w3y1 
+
+Ew1x2 =~ ew1xw1x*w1x2 
+Ew1y2 =~ ew1yw1y*w1y2 
+
+Ew2x2 =~ ew2xw2x*w2x2 
+Ew2y2 =~ ew2yw2y*w2y2 
+
+Ew3x2 =~ ew3xw3x*w3x2 
+Ew3y2 =~ ew3yw3y*w3y2 
+
+# ACE Covariances Within Twin Between Trait
+# A
+Aw1x1 ~~ raw1*Aw1y1
+Aw2x1 ~~ raw2*Aw2y1
+Aw3x1 ~~ raw3*Aw3y1
+
+Aw1x2 ~~ raw1*Aw1y2
+Aw2x2 ~~ raw2*Aw2y2
+Aw3x2 ~~ raw3*Aw3y2
+
+# C
+Cw1x1 ~~ rcw1*Cw1y1
+Cw2x1 ~~ rcw2*Cw2y1
+Cw3x1 ~~ rcw3*Cw3y1
+
+Cw1x2 ~~ rcw1*Cw1y2
+Cw2x2 ~~ rcw2*Cw2y2
+Cw3x2 ~~ rcw3*Cw3y2
+
+# E
+Ew1x1 ~~ rew1*Ew1y1
+Ew2x1 ~~ rew2*Ew2y1
+Ew3x1 ~~ rew3*Ew3y1
+
+Ew1x2 ~~ rew1*Ew1y2
+Ew2x2 ~~ rew2*Ew2y2
+Ew3x2 ~~ rew3*Ew3y2
+
+# ACE Covariances Between Twin
+Aw1x1 ~~ 1*Aw1x2
+Aw2x1 ~~ 1*Aw2x2
+Aw3x1 ~~ 1*Aw3x2
+Aw1x1 ~~ raw1*Aw1y2 
+Aw2x1 ~~ raw1*Aw2y2
+Aw3x1 ~~ raw1*Aw3y2
+
+Aw1y1 ~~ 1*Aw1y2
+Aw2y1 ~~ 1*Aw2y2
+Aw3y1 ~~ 1*Aw3y2
+Aw1y1 ~~ raw1*Aw1x2 
+Aw2y1 ~~ raw1*Aw2x2
+Aw3y1 ~~ raw1*Aw3x2
+
+Cw1x1 ~~ 1*Cw1x2
+Cw2x1 ~~ 1*Cw2x2
+Cw3x1 ~~ 1*Cw3x2
+Cw1x1 ~~ rcw1*Cw1y2 
+Cw2x1 ~~ rcw1*Cw2y2
+Cw3x1 ~~ rcw1*Cw3y2
+
+Cw1y1 ~~ 1*Cw1y2
+Cw2y1 ~~ 1*Cw2y2
+Cw3y1 ~~ 1*Cw3y2
+Cw1y1 ~~ raw1*Cw1x2 
+Cw2y1 ~~ raw1*Cw2x2
+Cw3y1 ~~ raw1*Cw3x2
 
 '
 # the dz model-object (only parameters that differ to those in the mz object)
@@ -93,6 +156,7 @@ dimvars <- c(ov,lv)
 
 mzpartable$free <- ifelse(mzpartable$free != 0, 1,
                 ifelse(mzpartable$free == 0, 0, NA))
+
 # prepare parameter list for A matrix
 Apar <- mzpartable[mzpartable$op %in% c("=~","~"),]
 Apar$DV <- ifelse(Apar$op == "=~", Apar$rhs,
@@ -233,6 +297,10 @@ matA <- mxMatrix(type = "Full", values = Aval, labels = Alabel, free = Afree, na
 matSmz <- mxMatrix(type = "Full", values = SvalMZ, labels = Slabel, free = Sfree, name = "Smz")
 matSdz <- mxMatrix(type = "Full", values = Svaldz, labels = Slabel, free = Sfree, name = "Sdz")
 
+# start values
+    # Paths: OLS Matrix (assuming for latent variables a variance of 1)
+    # Variances: Empirical Variances for manifests, 1 for latents
+    # Error variances: http://www.philender.com/courses/multivariate/notes/mr3.html
 
 
 
