@@ -476,6 +476,34 @@ print(svmeancovvars)
 cat("\n\n\nStarting Values for the mean vector\n\n")
 print(svmean)
 
+covacevars <- var(usedata[,acevars1], use = "pairwise")
+varacevars <- diag(as.matrix(var(usedata[,acevars1], use = "pairwise")))
+if (!is.null(covvars)) {
+Ycov <- as.matrix(subset(na.omit(usedata), select = acevars1))
+Xcov <- cbind(1,as.matrix(subset(na.omit(usedata), select = c(covvarslong_checked,covvars1))))
+pathCovstart <- (t(solve(t(Xcov)%*%Xcov)%*%t(Xcov)%*%Ycov))[,2:ncol(Xcov)]
+if (is.null(dim(pathCovstart))) {
+pathCovstart <- matrix(t(pathCovstart), ncol = length(pathCovstart))
+} 
+pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete matrix rownames(pathCovstart) <- NULL
+colnames(pathCovstart) <- NULL
+pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
+
+
+if (!is.null(covvarswide_checked)) {
+pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
+
+
+if (is.null(ncol(pathCovstartwide))) {
+pathCovstartwide <- matrix(pathCovstartwide, nrow = length(pathCovstartwide))
+}
+pathCovstartwide <- pathCovstartwide[, rep(1:ncol(pathCovstartwide), each=2)]
+} 
+if (is.null(covvarswide_checked)) {
+pathCovstartwide <- NULL
+  }
+}
+
 if (!is.null(ordinal)) {
 # check number of levels of ordinal variable (crucial question is: ordinal or binary?) -> necessary for later conditional statements 
 nlevels <- function(variable) { 
@@ -516,6 +544,7 @@ pathCovstart <- matrix(t(pathCovstart), ncol = length(pathCovstart))
 pathCovstart <- pathCovstart[rep(seq_len(nrow(pathCovstart)), 2), ] # complete matrix rownames(pathCovstart) <- NULL
 colnames(pathCovstart) <- NULL
 pathCovstartlong <- pathCovstart[,1:length(covvarslong_checked)]
+
 
 if (!is.null(covvarswide_checked)) {
 pathCovstartwide <- pathCovstart[,(length(covvarslong_checked)+1):ncol(pathCovstart)]
@@ -611,6 +640,8 @@ inc       <- mxMatrix(type="Lower", nrow=max(nTh), ncol=max(nTh), free=FALSE, va
 threG     <- mxAlgebra(expression= inc %*% thinG, name="threG") # Multiplikation stellt sicher, dass Th3>Th2>Th1, wobei Th2>Th1 schon durch die Fixierung auf 0, bzw. 1 gesichert ist!
 #umxThresholdMatrix(df = data, selDVs = ordinalwide, sep = "_", method = "Mehta")
 }
+
+
 # define the MZ and DZ data sets
 if (moderation == TRUE) {
 mzData <- usedata %>% filter(!!as.symbol(zyg)==1) %>% select(variables,moderatorvars)
@@ -1719,7 +1750,7 @@ modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun, name="D
 
 if (!is.null(ordinal)) {
 if (2 %in% ordinallength) {
-  modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
+modelMZ   <- mxModel(pars, covCMZ, covMZ, matSMZ, dataMZ, expMZ, fitfun, binary,name="MZ")
 modelDZ   <- mxModel(pars, covCDZ, covDZ, matSDZ, dataDZ, expDZ, fitfun,name="DZ")
 }
 }
