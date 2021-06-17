@@ -1019,7 +1019,6 @@ freeModACE[[index]][as.vector(i)[2],as.vector(i)[1]] <- TRUE
 }
 }
 
-
 # create list that stores labels of interaction effects
 labelACE <- list()
 nvstring <- as.character(1:nv)
@@ -1051,9 +1050,12 @@ pathModACEStore[[index]] <- matrixstore
 if (type == "aceb") {
 for (i in 1:length(names(pathModACEStore))) {
 if (grepl("e$",names(pathModACEStore)[i]))
-pathModACEStore[[i]]@free[!diag(pathModACEStore[[i]]@free)] <-  FALSE
+#pathModACEStore[[i]]@free[!diag(pathModACEStore[[i]]@free)] <-  FALSE
+pathModACEStore[[i]]@free[lower.tri(pathModACEStore[[i]]@free, diag = FALSE)] <- FALSE
 }
 }
+
+
 
 ## differentiate between long and wide formatted moderators
 modACElong
